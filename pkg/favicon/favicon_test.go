@@ -28,7 +28,6 @@ func TestDefaultIcon(t *testing.T) {
 	}
 }
 
-
 func TestTagMetaIcons(t *testing.T) {
 	goog, _ := url.Parse("http://www.google.com")
 	resp, err := http.DefaultClient.Get(goog.String())
@@ -81,7 +80,4 @@ func TestGetBest(t *testing.T) {
 		t.Errorf("Best icon not chosen. Favicon chosen.")
 	}
 
-
 }
-
-
