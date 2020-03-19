@@ -1,5 +1,7 @@
 package favicon
 
+// draws heavily on Scott Werner's python package https://github.com/scottwernervt/favicon
+
 import (
 	"errors"
 	"github.com/PuerkitoBio/goquery"
