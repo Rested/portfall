@@ -1,6 +1,7 @@
 module portfall
 
 require (
+	github.com/PuerkitoBio/goquery v1.5.1
 	github.com/leaanthony/mewn v0.10.7
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/wailsapp/wails v1.0.2
