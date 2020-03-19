@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+// todo: create a mock server for these reqs to hit
+
 func TestDefaultIcon(t *testing.T) {
 	goog, err := url.Parse("http://www.google.com")
 	icon, err := defaultIcon(goog)
@@ -52,6 +54,34 @@ func TestTagMetaIcons(t *testing.T) {
 	if icon.width != 0 || icon.height != 0 {
 		t.Errorf("expected 0,0 height,width. Got %d,%d", icon.width, icon.height)
 	}
+}
+
+func TestGetBest(t *testing.T) {
+	goog, err := url.Parse("http://www.google.com")
+	icon, err := GetBest(goog.String())
+	if err != nil {
+		t.Error(err)
+	}
+	if icon.size == 0 {
+		t.Errorf("expected non-zero file iconsize")
+	}
+	if path.Dir(icon.filepath) != os.TempDir() {
+		t.Errorf("expected output to live in os tempdir %s got %s", os.TempDir(), path.Dir(icon.filepath))
+	}
+	if icon.width != 0 || icon.height != 0 {
+		t.Errorf("expected 0,0 height,width. Got %d,%d", icon.width, icon.height)
+	}
+
+	defaultIcon, err := defaultIcon(goog)
+	if err != nil {
+		t.Error(err)
+	}
+	// best icon is actually chosen
+	if defaultIcon.url == icon.url || defaultIcon.size == icon.size {
+		t.Errorf("Best icon not chosen. Favicon chosen.")
+	}
+
+
 }
 
 

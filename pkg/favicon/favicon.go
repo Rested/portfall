@@ -61,7 +61,7 @@ func GetBest(getUrl string) (*Icon, error) {
 
 	// get the largest favicon
 	sort.Slice(icons, func(i, j int) bool {
-		return icons[i].size < icons[j].size
+		return icons[i].size > icons[j].size
 	})
 
 	return icons[0], nil
