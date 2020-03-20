@@ -73,8 +73,20 @@ func PortForwardAPod(req PortForwardAPodRequest) error {
 		return err
 	}
 
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, &url.URL{Scheme: "https", Path: path, Host: hostIP})
-	fw, err := portforward.New(dialer, []string{fmt.Sprintf("%d:%d", req.LocalPort, req.PodPort)}, req.StopCh, req.ReadyCh, os.Stdout, os.Stderr)
+	dialer := spdy.NewDialer(
+		upgrader,
+		&http.Client{Transport: transport},
+		http.MethodPost,
+		&url.URL{Scheme: "https", Path: path, Host: hostIP})
+
+	fw, err := portforward.New(
+		dialer,
+		[]string{fmt.Sprintf("%d:%d", req.LocalPort, req.PodPort)},
+		req.StopCh,
+		req.ReadyCh,
+		os.Stdout,
+		os.Stderr)
+
 	if err != nil {
 		return err
 	}
@@ -112,7 +124,7 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 	case <-time.After(4 * time.Second):
 		close(stopCh)
 		//close(readyCh)
-		return nil, fmt.Errorf("timed out of portforward after 2 seconds")
+		return nil, fmt.Errorf("timed out of portforward for pod %s on port %d after 4 seconds", pod.Name, portForwardReq.PodPort)
 	}
 	website := Website{
 		isForwarded:    true, // todo: ui decision as stated below
@@ -124,7 +136,6 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 	// get the favicon
 	bestIcon, err := favicon.GetBest(fmt.Sprintf("http://localhost:%d", localPort))
 	if err != nil {
-		log.Print(err)
 		close(stopCh)
 		return nil, err
 	}
@@ -168,7 +179,7 @@ websiteLoop:
 	}
 	for _, ns := range c.activeNamespaces {
 		if ns != namespace {
-			newNamespaces = append(newNamespaces, namespace)
+			newNamespaces = append(newNamespaces, ns)
 		}
 	}
 	c.activeNamespaces = newNamespaces

@@ -107,6 +107,7 @@ function App() {
                 });
             }
             if (nsToAdd) {
+                console.log("adding ns", nsToAdd)
                 window.backend.Client.GetWebsitesInNamespace(nsToAdd).then(results => {
                     if (!(prevSelectedNS || []).includes("All Namespaces")) {
                         newWebsites = newWebsites.concat(JSON.parse(results));
@@ -131,10 +132,9 @@ function App() {
                         <Typography className={classes.title} variant="h6" noWrap>
                             Portfall
                         </Typography>
-                        <FormControl className={classes.formControl} color="inherit">
+                        <FormControl className={classes.formControl}>
                             {/* todo: multiple selectedNS selection */}
-                            <Autocomplete options={["All Namespaces"].concat(namespaces)} getOptionLabel={option => option}
-                                          getOptionValue={option => option}
+                            <Autocomplete options={["All Namespaces"].concat(namespaces)}
                                           multiple
                                           value={selectedNS}
                                           classes={{
@@ -172,7 +172,7 @@ function App() {
                             </Alert>
                         </Grid>) : null}
                         {websites.map(({localPort, podPort, title, iconRemoteUrl}) => (
-                            <Grid item xs={4}>
+                            <Grid item xs={4} key={localPort}>
                                 <Card>
                                     <CardHeader classes={{content: classes.cardHeaderTitle}}
                                                 avatar={<Avatar src={iconRemoteUrl}/>}
