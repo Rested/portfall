@@ -1,6 +1,7 @@
 package favicon
 
 import (
+	"github.com/PuerkitoBio/goquery"
 	"net/http"
 	"net/url"
 	"os"
@@ -20,8 +21,8 @@ func TestDefaultIcon(t *testing.T) {
 	if icon.RemoteUrl != "http://www.google.com/favicon.ico" {
 		t.Errorf("icon RemoteUrl wrong, expected http://www.google.com/favicon.ico, got %s", icon.RemoteUrl)
 	}
-	if path.Dir(icon.filepath) != os.TempDir() {
-		t.Errorf("expected output to live in os tempdir %s got %s", os.TempDir(), path.Dir(icon.filepath))
+	if path.Dir(icon.FilePath) != os.TempDir() {
+		t.Errorf("expected output to live in os tempdir %s got %s", os.TempDir(), path.Dir(icon.FilePath))
 	}
 	if icon.size == 0 {
 		t.Errorf("expected non-zero file iconsize")
@@ -35,7 +36,11 @@ func TestTagMetaIcons(t *testing.T) {
 		t.Errorf("Connectivity problem")
 	}
 	defer resp.Body.Close()
-	tmIcons, err := tagMetaIcons(*resp)
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		t.Error(err)
+	}
+	tmIcons, err := tagMetaIcons(*doc, *resp.Request.URL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,11 +52,28 @@ func TestTagMetaIcons(t *testing.T) {
 	if icon.size == 0 {
 		t.Errorf("expected non-zero file iconsize")
 	}
-	if path.Dir(icon.filepath) != os.TempDir() {
-		t.Errorf("expected output to live in os tempdir %s got %s", os.TempDir(), path.Dir(icon.filepath))
+	if path.Dir(icon.FilePath) != os.TempDir() {
+		t.Errorf("expected output to live in os tempdir %s got %s", os.TempDir(), path.Dir(icon.FilePath))
 	}
 	if icon.width != 0 || icon.height != 0 {
 		t.Errorf("expected 0,0 height,width. Got %d,%d", icon.width, icon.height)
+	}
+}
+
+func TestGetTitle(t *testing.T)  {
+	goog, _ := url.Parse("http://www.google.com")
+	resp, err := http.DefaultClient.Get(goog.String())
+	if err != nil {
+		t.Error(err)
+	}
+	defer resp.Body.Close()
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		t.Error(err)
+	}
+	title := getTitle(*doc, *resp.Request.URL)
+	if title != "Google" {
+		t.Errorf("Expected page title Google but got %s", title)
 	}
 }
 
@@ -64,8 +86,8 @@ func TestGetBest(t *testing.T) {
 	if icon.size == 0 {
 		t.Errorf("expected non-zero file iconsize")
 	}
-	if path.Dir(icon.filepath) != os.TempDir() {
-		t.Errorf("expected output to live in os tempdir %s got %s", os.TempDir(), path.Dir(icon.filepath))
+	if path.Dir(icon.FilePath) != os.TempDir() {
+		t.Errorf("expected output to live in os tempdir %s got %s", os.TempDir(), path.Dir(icon.FilePath))
 	}
 	if icon.width != 0 || icon.height != 0 {
 		t.Errorf("expected 0,0 height,width. Got %d,%d", icon.width, icon.height)
@@ -79,5 +101,7 @@ func TestGetBest(t *testing.T) {
 	if defaultIcon.RemoteUrl == icon.RemoteUrl || defaultIcon.size == icon.size {
 		t.Errorf("Best icon not chosen. Favicon chosen.")
 	}
-
+	if icon.PageTitle != "Google" {
+		t.Errorf("Expected page title Google but got %s", icon.PageTitle)
+	}
 }

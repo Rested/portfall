@@ -55,11 +55,17 @@ func GetBest(getUrl string) (*Icon, error) {
 	}
 
 	var icons []*Icon
-	defIco, err := defaultIcon(resp.Request.URL)
+	respUrl := resp.Request.URL
+	defIco, err := defaultIcon(respUrl)
 	if err == nil {
 		icons = append(icons, defIco)
 	}
-	tmIcons, err := tagMetaIcons(*resp)
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+	tmIcons, err := tagMetaIcons(*doc, *respUrl)
 	if err == nil {
 		icons = append(icons, tmIcons...)
 	}
@@ -74,23 +80,17 @@ func GetBest(getUrl string) (*Icon, error) {
 	})
 
 	bestIcon := icons[0]
-	bestIcon.PageTitle = getTitle(*resp)
+	bestIcon.PageTitle = getTitle(*doc, *respUrl)
 	return bestIcon, nil
 }
 
-func getTitle(response http.Response) string {
-	doc, err := goquery.NewDocumentFromReader(response.Body)
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(doc.Find("title").First().Text())
+func getTitle(doc goquery.Document, respUrl url.URL) string {
+	title := strings.TrimSpace(doc.Find("title").First().Text())
+	log.Printf("Got title '%s' for page at %s", title, respUrl.String())
+	return title
 }
 
-func tagMetaIcons(response http.Response) ([]*Icon, error) {
-	doc, err := goquery.NewDocumentFromReader(response.Body)
-	if err != nil {
-		return nil, err
-	}
+func tagMetaIcons(doc goquery.Document, respUrl url.URL) ([]*Icon, error) {
 	var tagsToFetch []*goquery.Selection
 
 	// handle link nodes
@@ -125,7 +125,7 @@ func tagMetaIcons(response http.Response) ([]*Icon, error) {
 		}
 	})
 
-	log.Printf("Got %d icon tags for RemoteUrl %s", len(tagsToFetch), response.Request.URL.String())
+	log.Printf("Got %d icon tags for RemoteUrl %s", len(tagsToFetch), respUrl.String())
 
 	var icons []*Icon
 	for _, s := range tagsToFetch {
@@ -144,8 +144,8 @@ func tagMetaIcons(response http.Response) ([]*Icon, error) {
 		}
 
 		if !parsedLinkUrl.IsAbs() {
-			parsedLinkUrl.Host = response.Request.URL.Host
-			parsedLinkUrl.Scheme = response.Request.URL.Scheme
+			parsedLinkUrl.Host = respUrl.Host
+			parsedLinkUrl.Scheme = respUrl.Scheme
 		}
 
 		width, height := dimensions(s, linkUrl)
