@@ -27,6 +27,7 @@ import (
 type Client struct {
 	s                *kubernetes.Clientset
 	conf             *rest.Config
+	configPath 		 string
 	websites         []*Website
 	activeNamespaces []string
 }
@@ -306,22 +307,44 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 	return string(jBytes)
 }
 
-func GetDefaultClientSetAndConfig() (*kubernetes.Clientset, *rest.Config, error) {
+func GetDefaultClientSetAndConfig() (*kubernetes.Clientset, *rest.Config, string, error) {
 	var configPath string
 	if home := homeDir(); home != "" {
 		configPath = filepath.Join(home, ".kube", "config")
 		config, err := clientcmd.BuildConfigFromFlags("", configPath)
 		if err != nil {
-			return &kubernetes.Clientset{}, &rest.Config{}, err
+			return &kubernetes.Clientset{}, &rest.Config{}, "", err
 		}
 		clientSet, err := kubernetes.NewForConfig(config)
 		if err != nil {
-			return &kubernetes.Clientset{}, &rest.Config{}, err
+			return &kubernetes.Clientset{}, &rest.Config{}, "", err
 		}
-		return clientSet, config, nil
+		return clientSet, config, configPath, nil
 	}
-	return &kubernetes.Clientset{}, &rest.Config{}, errors.New("default config not found")
+	return &kubernetes.Clientset{}, &rest.Config{}, "", errors.New("default config not found")
 }
+
+func (c *Client) GetCurrentConfigPath() string {
+	return c.configPath
+}
+
+func (c *Client) SetConfigPath(configPath string) string  {
+	config, err := clientcmd.BuildConfigFromFlags("", configPath)
+	if err != nil {
+		log.Printf("error building config from path %s", configPath)
+		return c.configPath
+	}
+	clientSet, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Printf("error buidling clientset from config at %s", configPath)
+		return  c.configPath
+	}
+	c.configPath = configPath
+	c.conf = config
+	c.s = clientSet
+	return configPath
+}
+// todo: search for all config files and present them in ui - autodetect
 
 func homeDir() string {
 	if h := os.Getenv("HOME"); h != "" {
@@ -331,12 +354,13 @@ func homeDir() string {
 }
 
 func (c *Client) WailsInit(runtime *wails.Runtime) error {
-	s, conf, err := GetDefaultClientSetAndConfig()
+	s, conf, confPath, err := GetDefaultClientSetAndConfig()
 	if err != nil {
 		log.Printf("failed ot get default config")
 	} else {
 		c.s = s
 		c.conf = conf
+		c.configPath = confPath
 	}
 	return nil
 }
