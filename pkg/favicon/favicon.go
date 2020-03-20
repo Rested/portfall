@@ -4,10 +4,12 @@ package favicon
 
 import (
 	"errors"
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"io"
 	"io/ioutil"
 	"log"
+	"mime"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -17,12 +19,13 @@ import (
 )
 
 type Icon struct {
-	width    int
-	height   int
-	url      string
-	filepath string
-	mimeType string
-	size     int64
+	width     int
+	height    int
+	RemoteUrl string
+	FilePath  string
+	mimeType  string
+	size      int64
+	PageTitle string
 }
 
 var LinkRels = [4]string{"icon", "shortcut icon", "apple-touch-icon", "apple-touch-icon-precomposed"}
@@ -46,6 +49,7 @@ func GetBest(getUrl string) (*Icon, error) {
 	if resp.StatusCode >= 400 {
 		return nil, errors.New("received bad status code")
 	}
+
 	var icons []*Icon
 	defIco, err := defaultIcon(resp.Request.URL)
 	if err == nil {
@@ -58,13 +62,24 @@ func GetBest(getUrl string) (*Icon, error) {
 	if len(icons) == 0 {
 		return nil, errors.New("failed to get any icons for website")
 	}
+	log.Printf("favicon finder got a total of %d icons to choose from", len(icons))
 
 	// get the largest favicon
 	sort.Slice(icons, func(i, j int) bool {
 		return icons[i].size > icons[j].size
 	})
 
-	return icons[0], nil
+	bestIcon := icons[0]
+	bestIcon.PageTitle = getTitle(*resp)
+	return bestIcon, nil
+}
+
+func getTitle(response http.Response) string {
+	doc, err := goquery.NewDocumentFromReader(response.Body)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(doc.Find("title").First().Text())
 }
 
 func tagMetaIcons(response http.Response) ([]*Icon, error) {
@@ -106,7 +121,7 @@ func tagMetaIcons(response http.Response) ([]*Icon, error) {
 		}
 	})
 
-	log.Printf("Got %d icon tags for url %s", len(tagsToFetch), response.Request.URL.String())
+	log.Printf("Got %d icon tags for RemoteUrl %s", len(tagsToFetch), response.Request.URL.String())
 
 	var icons []*Icon
 	for _, s := range tagsToFetch {
@@ -136,12 +151,12 @@ func tagMetaIcons(response http.Response) ([]*Icon, error) {
 			continue
 		}
 		icons = append(icons, &Icon{
-			width:    width,
-			height:   height,
-			url:      downloadedIcon.url,
-			filepath: downloadedIcon.filepath,
-			mimeType: downloadedIcon.mimeType,
-			size:     downloadedIcon.size,
+			width:     width,
+			height:    height,
+			RemoteUrl: downloadedIcon.RemoteUrl,
+			FilePath:  downloadedIcon.FilePath,
+			mimeType:  downloadedIcon.mimeType,
+			size:      downloadedIcon.size,
 		})
 	}
 	return icons, nil
@@ -193,11 +208,11 @@ func tagMetaUrlGetter(tm *goquery.Selection) (*string, error) {
 	if exists {
 		return &content, nil
 	}
-	return nil, errors.New("no url found on html tag")
+	return nil, errors.New("no RemoteUrl found on html tag")
 }
 
-func responseToFile(response http.Response) (string, *int64) {
-	file, err := ioutil.TempFile("", "portfall")
+func responseToFile(response http.Response, extension string) (string, *int64) {
+	file, err := ioutil.TempFile("", fmt.Sprintf("portfall*%s", extension))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -221,23 +236,35 @@ func defaultIcon(parsedUrl *url.URL) (*Icon, error) {
 
 func getIconFromUrl(iconUrl *url.URL) (*Icon, error) {
 	// download icon and get extension and size
+	log.Printf("Getting icon from RemoteUrl %s", iconUrl.String())
 	resp, err := http.DefaultClient.Get(iconUrl.String())
 	if err != nil {
 		return nil, err
 	}
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf(
+			"received bad status code %d attempting to retrieve icon at %s", resp.StatusCode, iconUrl.String())
+	}
 	defer resp.Body.Close()
-
-	fp, size := responseToFile(*resp)
-
 	mimeType := resp.Header.Get("content-type")
+	extensions, err := mime.ExtensionsByType(mimeType)
+	if err != nil {
+		return nil, err
+	}
+	var extension string
+	if extensions != nil {
+		extension = extensions[0]
+	}
+	fp, size := responseToFile(*resp, extension)
+
 
 	return &Icon{
-		width:    0,
-		height:   0,
-		url:      iconUrl.String(),
-		filepath: fp,
-		mimeType: mimeType,
-		size:     *size,
+		width:     0,
+		height:    0,
+		RemoteUrl: iconUrl.String(),
+		FilePath:  fp,
+		mimeType:  mimeType,
+		size:      *size,
 	}, nil
 }
 

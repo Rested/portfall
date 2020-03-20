@@ -1,11 +1,11 @@
-package k8s_client
+package client
 
 import (
-	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/phayes/freeport"
-	"google.golang.org/appengine/log"
+	"github.com/wailsapp/wails"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,8 +23,9 @@ import (
 )
 
 type Client struct {
-	s    *kubernetes.Clientset
-	conf *rest.Config
+	s        *kubernetes.Clientset
+	conf     *rest.Config
+	websites []*Website
 }
 
 type PortForwardAPodRequest struct {
@@ -35,17 +37,25 @@ type PortForwardAPodRequest struct {
 	// PodPort is the target port for the pod
 	PodPort int32
 	// StopCh is the channel used to manage the port forward lifecycle
-	StopCh <-chan struct{}
+	StopCh chan struct{}
 	// ReadyCh communicates when the tunnel is ready to receive traffic
 	ReadyCh chan struct{}
 }
 
 type Website struct {
-	isForwarded bool
-	localPort   int32
-	podPort     int32
-	title       string
-	bestIcon    favicon.Icon
+	isForwarded    bool
+	portForwardReq PortForwardAPodRequest
+	localPort      int32
+	podPort        int32
+	icon           favicon.Icon
+}
+
+type PresentAbleWebsite struct {
+	LocalPort int32  `json:"localPort"`
+	PodPort   int32  `json:"podPort"`
+	Title     string `json:"title"`
+	IconUrl   string `json:"iconUrl"`
+	IconRemoteUrl string `json:"iconRemoteUrl"`
 }
 
 func PortForwardAPod(req PortForwardAPodRequest) error {
@@ -66,7 +76,7 @@ func PortForwardAPod(req PortForwardAPodRequest) error {
 	return fw.ForwardPorts()
 }
 
-func (c Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, error) {
+func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, error) {
 	localPort, err := freeport.GetFreePort()
 	if err != nil {
 		return nil, err
@@ -84,48 +94,88 @@ func (c Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, er
 		StopCh:     stopCh,
 		ReadyCh:    readyCh,
 	}
-	err := PortForwardAPod(portForwardReq)
-	if err != nil {
-		return nil, err
-	}
+	go PortForwardAPod(portForwardReq)
+
 	select {
 	case <-readyCh:
 		break
 	}
 	website := Website{
-		isForwarded: true, // todo: ui decision as stated below
-		localPort:   int32(localPort),
-		podPort:     containerPort,
+		isForwarded:    true, // todo: ui decision as stated below
+		localPort:      int32(localPort),
+		podPort:        containerPort,
+		portForwardReq: portForwardReq,
 	}
 
 	// get the favicon
-
 	bestIcon, err := favicon.GetBest(fmt.Sprintf("http://localhost:%d", localPort))
 	if err != nil {
 		return nil, err
 	}
-	website.bestIcon = *bestIcon
+	website.icon = *bestIcon
 	return &website, nil
 	// todo: close here or not - ui decision
 	// close(stopCh)
 }
 
-func (c Client) readPodsInNamespace(namespace string) ([]*v1.Pod, error) {
+func (c *Client) ListNamespaces() (nsList []string) {
+	namespaces, err := c.s.CoreV1().Namespaces().List(metav1.ListOptions{})
+	if err != nil {
+		log.Printf("Found no namespaces %v", err)
+	}
+	for _, ns := range namespaces.Items {
+		nsList = append(nsList, ns.Name)
+	}
+	return nsList
+}
+
+func (c *Client) DisableWebsitesInCurrentNamespace() {
+	for _, website := range c.websites {
+		close(website.portForwardReq.StopCh)
+	}
+}
+
+func (c *Client) GetWebsitesInNamespace(namespace string) string {
 	pods, err := c.s.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 	if err != nil {
-		return []*v1.Pod{}, err
+		log.Printf("Failed to get pods in ns %s", namespace)
+		return ""
 	}
+	var nsWebsites []*Website
 	for _, pod := range pods.Items {
 		for _, container := range pod.Spec.Containers {
 			for _, port := range container.Ports {
 				website, err := c.getWebsiteForPort(pod, port.ContainerPort)
 				if err != nil {
-					log.Infof(context.TODO(), "Failed to get iconst for container %s in pod %s on port %d", container.Name, pod.Name, port.ContainerPort)
+					log.Printf("Failed to get icons for container %s in pod %s on port %d", container.Name, pod.Name, port.ContainerPort)
+				} else {
+					nsWebsites = append(nsWebsites, website)
+
 				}
 			}
 		}
 	}
+	// ensure previous
+	c.DisableWebsitesInCurrentNamespace()
+	c.websites = nsWebsites
+	pw := make([]*PresentAbleWebsite, 0, len(nsWebsites))
+	for _, w := range nsWebsites {
+		title := w.icon.PageTitle
+		if title == "" {
+			title = w.portForwardReq.Pod.Name
+		}
 
+		pw = append(pw, &PresentAbleWebsite{
+			LocalPort: w.localPort,
+			PodPort:   w.podPort,
+			Title:     title,
+			IconUrl:   fmt.Sprintf("file://%s", w.icon.FilePath),
+			IconRemoteUrl: w.icon.RemoteUrl,
+		})
+		log.Printf("Returning website %s on pod port %d to frontend", title, w.podPort)
+	}
+	jBytes, _ := json.Marshal(pw)
+	return string(jBytes)
 }
 
 func GetDefaultClientSetAndConfig() (*kubernetes.Clientset, *rest.Config, error) {
@@ -150,4 +200,15 @@ func homeDir() string {
 		return h
 	}
 	return os.Getenv("USERPROFILE") // windows
+}
+
+func (c *Client) WailsInit(runtime *wails.Runtime) error {
+	s, conf, err := GetDefaultClientSetAndConfig()
+	if err != nil {
+		log.Printf("failed ot get default config")
+	} else {
+		c.s = s
+		c.conf = conf
+	}
+	return nil
 }

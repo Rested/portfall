@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import 'core-js/stable';
 import './index.css';
+import 'typeface-roboto';
 import App from './App';
 
 import * as Wails from '@wailsapp/runtime';

@@ -17,8 +17,8 @@ func TestDefaultIcon(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if icon.url != "http://www.google.com/favicon.ico" {
-		t.Errorf("icon url wrong, expected http://www.google.com/favicon.ico, got %s", icon.url)
+	if icon.RemoteUrl != "http://www.google.com/favicon.ico" {
+		t.Errorf("icon RemoteUrl wrong, expected http://www.google.com/favicon.ico, got %s", icon.RemoteUrl)
 	}
 	if path.Dir(icon.filepath) != os.TempDir() {
 		t.Errorf("expected output to live in os tempdir %s got %s", os.TempDir(), path.Dir(icon.filepath))
@@ -76,7 +76,7 @@ func TestGetBest(t *testing.T) {
 		t.Error(err)
 	}
 	// best icon is actually chosen
-	if defaultIcon.url == icon.url || defaultIcon.size == icon.size {
+	if defaultIcon.RemoteUrl == icon.RemoteUrl || defaultIcon.size == icon.size {
 		t.Errorf("Best icon not chosen. Favicon chosen.")
 	}
 

@@ -4,12 +4,16 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@material-ui/core": "^4.9.7",
+    "@material-ui/icons": "^4.9.1",
+    "@material-ui/lab": "^4.0.0-alpha.46",
+    "@wailsapp/runtime": "^1.0.0",
     "core-js": "^3.1.4",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "wails-react-scripts": "3.0.1-2",
     "react-modal": "3.8.1",
-    "@wailsapp/runtime": "^1.0.0"
+    "typeface-roboto": "0.0.75",
+    "wails-react-scripts": "3.0.1-2"
   },
   "scripts": {
     "start": "react-scripts start",
