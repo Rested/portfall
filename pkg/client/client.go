@@ -25,9 +25,10 @@ import (
 )
 
 type Client struct {
-	s        *kubernetes.Clientset
-	conf     *rest.Config
-	websites []*Website
+	s                *kubernetes.Clientset
+	conf             *rest.Config
+	websites         []*Website
+	activeNamespaces []string
 }
 
 type PortForwardAPodRequest struct {
@@ -58,6 +59,7 @@ type PresentAbleWebsite struct {
 	Title         string `json:"title"`
 	IconUrl       string `json:"iconUrl"`
 	IconRemoteUrl string `json:"iconRemoteUrl"`
+	Namespace     string `json:"namespace"`
 }
 
 // usage based on https://github.com/gianarb/kube-port-forward
@@ -107,7 +109,7 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 	select {
 	case <-readyCh:
 		break
-	case <-time.After(2 * time.Second):
+	case <-time.After(4 * time.Second):
 		close(stopCh)
 		//close(readyCh)
 		return nil, fmt.Errorf("timed out of portforward after 2 seconds")
@@ -143,84 +145,135 @@ func (c *Client) ListNamespaces() (nsList []string) {
 	return nsList
 }
 
-func (c *Client) DisableWebsitesInCurrentNamespace() {
+func (c *Client) RemoveWebsitesInNamespace(namespace string) {
+	var newWebsites []*Website
+	var newNamespaces []string
+websiteLoop:
 	for _, website := range c.websites {
-		close(website.portForwardReq.StopCh)
+		if website.portForwardReq.Pod.Namespace == namespace {
+			close(website.portForwardReq.StopCh)
+			continue
+		}
+		if namespace == "All Namespaces" {
+			for _, ns := range c.activeNamespaces {
+				if website.portForwardReq.Pod.Namespace == ns {
+					// don't close pods in still active namespaces
+					continue websiteLoop
+				}
+			}
+			close(website.portForwardReq.StopCh)
+			continue
+		}
+		newWebsites = append(newWebsites, website)
 	}
+	for _, ns := range c.activeNamespaces {
+		if ns != namespace {
+			newNamespaces = append(newNamespaces, namespace)
+		}
+	}
+	c.activeNamespaces = newNamespaces
+	c.websites = newWebsites
 }
 
 func (c *Client) GetWebsitesInNamespace(namespace string) string {
-	pods, err := c.s.CoreV1().Pods(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		log.Printf("Failed to get pods in ns %s", namespace)
-		log.Print(err)
-		return ""
-	}
-	services, err := c.s.CoreV1().Services(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		log.Printf("Failed to get services in ns %s", namespace)
-		log.Print(err)
-		return ""
+	skip := false
+	if namespace != "All Namespaces" {
+		for _, ns := range c.activeNamespaces {
+			if ns == "All Namespaces" || ns == namespace {
+				skip = true
+				break
+			}
+		}
 	}
 
 	var nsWebsites []*Website
-	var wg sync.WaitGroup
-	for _, pod := range pods.Items {
-		var handledPorts []int32
-		// services
-		for _, svc := range services.Items {
-			matchCount := 0
-			for k, v := range svc.Spec.Selector {
-				if pod.Labels[k] == v {
-					matchCount++
+	if !skip {
+		internalNS := namespace
+		if namespace == "All Namespaces" {
+			internalNS = ""
+		}
+		pods, err := c.s.CoreV1().Pods(internalNS).List(metav1.ListOptions{})
+		if err != nil {
+			log.Printf("Failed to get pods in ns %s", namespace)
+			log.Print(err)
+			return ""
+		}
+		services, err := c.s.CoreV1().Services(internalNS).List(metav1.ListOptions{})
+		if err != nil {
+			log.Printf("Failed to get services in ns %s", namespace)
+			log.Print(err)
+			return ""
+		}
+
+		var wg sync.WaitGroup
+		for _, pod := range pods.Items {
+			var handledPorts []int32
+			// services
+			for _, svc := range services.Items {
+				matchCount := 0
+				for k, v := range svc.Spec.Selector {
+					if pod.Labels[k] == v {
+						matchCount++
+					}
+				}
+				if matchCount == len(svc.Spec.Selector) {
+					for _, port := range svc.Spec.Ports {
+						handledPorts = append(handledPorts, port.TargetPort.IntVal)
+						wg.Add(1)
+						go func(p v1.Pod, tp int32, s v1.Service) {
+							defer wg.Done()
+							website, err := c.getWebsiteForPort(p, tp)
+							if err != nil {
+								log.Printf("Failed to get icons for pod %s in svc %s on port %d", p.Name, s.Name, tp)
+								log.Print(err)
+							} else {
+								nsWebsites = append(nsWebsites, website)
+							}
+						}(pod, port.TargetPort.IntVal, svc)
+					}
 				}
 			}
-			if matchCount == len(svc.Spec.Selector) {
-				for _, port := range svc.Spec.Ports {
-					handledPorts = append(handledPorts, port.TargetPort.IntVal)
+			// container ports
+			for _, container := range pod.Spec.Containers {
+			cpLoop:
+				for _, port := range container.Ports {
+					for _, hp := range handledPorts {
+						if port.ContainerPort == hp {
+							continue cpLoop
+						}
+					}
+
 					wg.Add(1)
-					go func(p v1.Pod, tp int32, s v1.Service) {
+					go func(p v1.Pod, cp int32, cont v1.Container) {
 						defer wg.Done()
-						website, err := c.getWebsiteForPort(p, tp)
+						website, err := c.getWebsiteForPort(p, cp)
 						if err != nil {
-							log.Printf("Failed to get icons for pod %s in svc %s on port %d", p.Name, s.Name, tp)
-							log.Print(err)
+							log.Printf("Failed to get icons for container %s in pod %s on port %d", cont.Name, p.Name, cp)
 						} else {
 							nsWebsites = append(nsWebsites, website)
 						}
-					}(pod, port.TargetPort.IntVal, svc)
+					}(pod, port.ContainerPort, container)
 				}
 			}
 		}
-		// container ports
-		for _, container := range pod.Spec.Containers {
-		cpLoop:
-			for _, port := range container.Ports {
-				for _, hp := range handledPorts {
-					if port.ContainerPort == hp {
-						continue cpLoop
-					}
-				}
 
-				wg.Add(1)
-				go func(p v1.Pod, cp int32, cont v1.Container) {
-					defer wg.Done()
-					website, err := c.getWebsiteForPort(p, cp)
-					if err != nil {
-						log.Printf("Failed to get icons for container %s in pod %s on port %d", cont.Name, p.Name, cp)
-					} else {
-						nsWebsites = append(nsWebsites, website)
-					}
-				}(pod, port.ContainerPort, container)
+		log.Printf("waiting for all potential websites to be processed")
+		wg.Wait()
+		if namespace == "All Namespaces" {
+			c.websites = nsWebsites
+		} else {
+			c.websites = append(c.websites, nsWebsites...)
+
+		}
+	} else {
+		log.Printf("skipping get websites for namespace %s as already in active namespaces %v", namespace, c.activeNamespaces)
+		for _, w := range c.websites {
+			if w.portForwardReq.Pod.Namespace == namespace {
+				nsWebsites = append(nsWebsites, w)
 			}
 		}
 	}
-
-	log.Printf("waiting for all potential websites to be processed")
-	wg.Wait()
-	// ensure previous
-	c.DisableWebsitesInCurrentNamespace()
-	c.websites = nsWebsites
+	c.activeNamespaces = append(c.activeNamespaces, namespace)
 	pw := make([]*PresentAbleWebsite, 0, len(nsWebsites))
 	for _, w := range nsWebsites {
 		title := w.icon.PageTitle
@@ -234,6 +287,7 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 			Title:         title,
 			IconUrl:       fmt.Sprintf("file://%s", w.icon.FilePath),
 			IconRemoteUrl: w.icon.RemoteUrl,
+			Namespace:     w.portForwardReq.Pod.Namespace,
 		})
 		log.Printf("Returning website %s on pod port %d to frontend", title, w.podPort)
 	}

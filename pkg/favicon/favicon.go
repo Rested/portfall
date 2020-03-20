@@ -44,7 +44,7 @@ func GetBest(getUrl string) (*Icon, error) {
 		Proto:  "HTTP",
 	}
 	c := http.Client{
-		Timeout: 3 * time.Second,
+		Timeout: 4 * time.Second,
 	}
 	resp, err := c.Do(&req)
 	if err != nil {

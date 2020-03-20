@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import FormControl from "@material-ui/core/FormControl";
 import {makeStyles} from "@material-ui/core/styles";
 import AppBar from "@material-ui/core/AppBar";
@@ -6,11 +6,10 @@ import Toolbar from "@material-ui/core/Toolbar";
 import Typography from "@material-ui/core/Typography";
 import Autocomplete from '@material-ui/lab/Autocomplete';
 import TextField from "@material-ui/core/TextField";
-import CircularProgress from "@material-ui/core/CircularProgress";
 import Grid from "@material-ui/core/Grid";
 import {Launch, MoodBadTwoTone} from "@material-ui/icons";
 import Alert from "@material-ui/lab/Alert";
-import {Card} from "@material-ui/core";
+import {Card, CircularProgress} from "@material-ui/core";
 import Avatar from "@material-ui/core/Avatar";
 import CardHeader from "@material-ui/core/CardHeader";
 import Button from "@material-ui/core/Button";
@@ -62,10 +61,19 @@ const theme = createMuiTheme({
     },
 });
 
+function usePrevious(value) {
+    const ref = useRef();
+    useEffect(() => {
+        ref.current = value;
+    });
+    return ref.current;
+}
+
 function App() {
     const classes = useStyles();
     const [namespaces, setNamespaces] = useState([]);
-    const [namespace, setNamespace] = useState(null);
+    const [selectedNS, setSelectedNS] = useState([]);
+    const prevSelectedNS = usePrevious(selectedNS);
     const [configFilePath, setConfigFilePath] = useState(null);
     const [loading, setLoading] = useState(true);
     const [websites, setWebsites] = useState([]);
@@ -73,19 +81,46 @@ function App() {
     useEffect(() => {
         window.backend.Client.ListNamespaces().then((r) => {
             setNamespaces(r);
-            setNamespace("default");
+            setSelectedNS(["default"]);
         });
     }, []);
 
     useEffect(() => {
-        if (namespace !== null) {
+        if (selectedNS !== null) {
             setLoading(true)
-            window.backend.Client.GetWebsitesInNamespace(namespace).then(results => {
-                setWebsites(JSON.parse(results));
-                setLoading(false);
-            });
+            // get ns to add
+            const nsToAdd = selectedNS.find(ns => !(prevSelectedNS || []).includes(ns));
+            const nsToRemove = (prevSelectedNS || []).find(ns => !selectedNS.includes(ns));
+            let newWebsites = websites;
+            if (nsToRemove) {
+                window.backend.Client.RemoveWebsitesInNamespace(nsToRemove).then(() => {
+                    console.log("removed namespace", nsToRemove)
+                });
+                newWebsites = websites.filter(w => {
+                    if(w.namespace === nsToRemove){
+                        return false
+                    }
+                    if (nsToRemove === "All Namespaces" && !selectedNS.includes(w.namespace)) {
+                        return false
+                    }
+                    return true
+                });
+            }
+            if (nsToAdd) {
+                window.backend.Client.GetWebsitesInNamespace(nsToAdd).then(results => {
+                    if (!(prevSelectedNS || []).includes("All Namespaces")) {
+                        newWebsites = newWebsites.concat(JSON.parse(results));
+                    }
+                    setWebsites(newWebsites);
+                    setLoading(false);
+                });
+            } else {
+                setWebsites(newWebsites);
+                setLoading(false)
+            }
+
         }
-    }, [namespace]);
+    }, [selectedNS]);
 
 
     return (
@@ -97,16 +132,18 @@ function App() {
                             Portfall
                         </Typography>
                         <FormControl className={classes.formControl} color="inherit">
-                            {/* todo: multiple namespace selection */}
-                            <Autocomplete options={[""].concat(namespaces)} getOptionLabel={option => option || "All"}
+                            {/* todo: multiple selectedNS selection */}
+                            <Autocomplete options={["All Namespaces"].concat(namespaces)} getOptionLabel={option => option}
                                           getOptionValue={option => option}
-                                          value={namespace}
+                                          multiple
+                                          value={selectedNS}
                                           classes={{
                                               inputRoot: classes.inputRoot,
                                               endAdornment: classes.endAdornment
                                           }}
                                           onChange={(_, value) => {
-                                              setNamespace(value)
+                                              //
+                                              setSelectedNS(value)
                                           }}
                                           renderInput={params => <TextField {...params} style={{color: 'white'}}
                                                                             label="Namespaces"
@@ -125,34 +162,32 @@ function App() {
                     justifyContent: 'center',
                     display: 'flex'
                 }}>
-                    {loading ? <CircularProgress/> : (
-                        <Grid container spacing={3} style={{
-                            flexGrow: 1,
-                            padding: "0 2rem"
-                        }}>
-                            {websites.length === 0 ? (<Grid item xs={12}>
-                                <Alert icon={<MoodBadTwoTone/>} severity="info">
-                                    <Typography>No websites found to port-forward in this namespace</Typography>
-                                </Alert>
-                            </Grid>) : null}
-                            {websites.map(({localPort, podPort, title, iconRemoteUrl}) => (
-                                <Grid item xs={4}>
-                                    <Card>
-                                        <CardHeader classes={{content: classes.cardHeaderTitle}}
-                                                    avatar={<Avatar src={iconRemoteUrl}/>}
-                                                    title={<Typography noWrap>{title}</Typography>}
-                                                    subheader={<span><b>{localPort}</b>:{podPort}</span>} action={
-                                            <Button endIcon={<Launch/>} size="small" color="primary"
-                                                    onClick={() => window.backend.OpenInBrowser(`http://localhost:${localPort}`)}>
-                                                Open
-                                            </Button>}/>
+                    <Grid container spacing={3} style={{
+                        flexGrow: 1,
+                        padding: "0 2rem"
+                    }}>
+                        {websites.length === 0 ? (<Grid item xs={12}>
+                            <Alert icon={<MoodBadTwoTone/>} severity="info">
+                                <Typography>No websites found to port-forward in this namespace</Typography>
+                            </Alert>
+                        </Grid>) : null}
+                        {websites.map(({localPort, podPort, title, iconRemoteUrl}) => (
+                            <Grid item xs={4}>
+                                <Card>
+                                    <CardHeader classes={{content: classes.cardHeaderTitle}}
+                                                avatar={<Avatar src={iconRemoteUrl}/>}
+                                                title={<Typography noWrap>{title}</Typography>}
+                                                subheader={<span><b>{localPort}</b>:{podPort}</span>} action={
+                                        <Button endIcon={<Launch/>} size="small" color="primary"
+                                                onClick={() => window.backend.OpenInBrowser(`http://localhost:${localPort}`)}>
+                                            Open
+                                        </Button>}/>
 
-                                    </Card>
-                                </Grid>
-                            ))}
-
-                        </Grid>
-                    )}
+                                </Card>
+                            </Grid>
+                        ))}
+                        {loading ? <Grid item xs={12} style={{textAlign: 'center'}}><CircularProgress/></Grid> : null}
+                    </Grid>
                 </div>
             </div>
         </ThemeProvider>
