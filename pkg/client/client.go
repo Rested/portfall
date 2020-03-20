@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"portfall/pkg/favicon"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -148,19 +149,26 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 		return ""
 	}
 	var nsWebsites []*Website
+	var wg sync.WaitGroup
 	for _, pod := range pods.Items {
 		for _, container := range pod.Spec.Containers {
 			for _, port := range container.Ports {
-				website, err := c.getWebsiteForPort(pod, port.ContainerPort)
-				if err != nil {
-					log.Printf("Failed to get icons for container %s in pod %s on port %d", container.Name, pod.Name, port.ContainerPort)
-				} else {
-					nsWebsites = append(nsWebsites, website)
+				wg.Add(1)
+				go func(p v1.Pod, cp int32) {
+					defer wg.Done()
+					website, err := c.getWebsiteForPort(p, cp)
+					if err != nil {
+						log.Printf("Failed to get icons for container %s in pod %s on port %d", container.Name, pod.Name, port.ContainerPort)
+					} else {
+						nsWebsites = append(nsWebsites, website)
+					}
+				}(pod, port.ContainerPort)
 
-				}
 			}
 		}
 	}
+	log.Printf("waiting for all potential websites to be processed")
+	wg.Wait()
 	// ensure previous
 	c.DisableWebsitesInCurrentNamespace()
 	c.websites = nsWebsites
