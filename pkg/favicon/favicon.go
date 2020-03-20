@@ -12,6 +12,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"path"
 	"regexp"
 	"sort"
 	"strconv"
@@ -146,6 +147,9 @@ func tagMetaIcons(doc goquery.Document, respUrl url.URL) ([]*Icon, error) {
 		if !parsedLinkUrl.IsAbs() {
 			parsedLinkUrl.Host = respUrl.Host
 			parsedLinkUrl.Scheme = respUrl.Scheme
+			if strings.HasPrefix(parsedLinkUrl.Path, ".") {
+				parsedLinkUrl.Path = path.Join(respUrl.Path, parsedLinkUrl.Path)
+			}
 		}
 
 		width, height := dimensions(s, linkUrl)

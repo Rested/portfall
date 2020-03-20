@@ -60,6 +60,7 @@ type PresentAbleWebsite struct {
 	IconRemoteUrl string `json:"iconRemoteUrl"`
 }
 
+// usage based on https://github.com/gianarb/kube-port-forward
 func PortForwardAPod(req PortForwardAPodRequest) error {
 	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward",
 		req.Pod.Namespace, req.Pod.Name)
@@ -108,7 +109,7 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 		break
 	case <-time.After(2 * time.Second):
 		close(stopCh)
-		close(readyCh)
+		//close(readyCh)
 		return nil, fmt.Errorf("timed out of portforward after 2 seconds")
 	}
 	website := Website{
@@ -121,6 +122,7 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 	// get the favicon
 	bestIcon, err := favicon.GetBest(fmt.Sprintf("http://localhost:%d", localPort))
 	if err != nil {
+		log.Print(err)
 		close(stopCh)
 		return nil, err
 	}
@@ -151,27 +153,69 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 	pods, err := c.s.CoreV1().Pods(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		log.Printf("Failed to get pods in ns %s", namespace)
+		log.Print(err)
 		return ""
 	}
+	services, err := c.s.CoreV1().Services(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		log.Printf("Failed to get services in ns %s", namespace)
+		log.Print(err)
+		return ""
+	}
+
 	var nsWebsites []*Website
 	var wg sync.WaitGroup
 	for _, pod := range pods.Items {
+		var handledPorts []int32
+		// services
+		for _, svc := range services.Items {
+			matchCount := 0
+			for k, v := range svc.Spec.Selector {
+				if pod.Labels[k] == v {
+					matchCount++
+				}
+			}
+			if matchCount == len(svc.Spec.Selector) {
+				for _, port := range svc.Spec.Ports {
+					handledPorts = append(handledPorts, port.TargetPort.IntVal)
+					wg.Add(1)
+					go func(p v1.Pod, tp int32, s v1.Service) {
+						defer wg.Done()
+						website, err := c.getWebsiteForPort(p, tp)
+						if err != nil {
+							log.Printf("Failed to get icons for pod %s in svc %s on port %d", p.Name, s.Name, tp)
+							log.Print(err)
+						} else {
+							nsWebsites = append(nsWebsites, website)
+						}
+					}(pod, port.TargetPort.IntVal, svc)
+				}
+			}
+		}
+		// container ports
 		for _, container := range pod.Spec.Containers {
+		cpLoop:
 			for _, port := range container.Ports {
+				for _, hp := range handledPorts {
+					if port.ContainerPort == hp {
+						continue cpLoop
+					}
+				}
+
 				wg.Add(1)
-				go func(p v1.Pod, cp int32) {
+				go func(p v1.Pod, cp int32, cont v1.Container) {
 					defer wg.Done()
 					website, err := c.getWebsiteForPort(p, cp)
 					if err != nil {
-						log.Printf("Failed to get icons for container %s in pod %s on port %d", container.Name, pod.Name, port.ContainerPort)
+						log.Printf("Failed to get icons for container %s in pod %s on port %d", cont.Name, p.Name, cp)
 					} else {
 						nsWebsites = append(nsWebsites, website)
 					}
-				}(pod, port.ContainerPort)
-
+				}(pod, port.ContainerPort, container)
 			}
 		}
 	}
+
 	log.Printf("waiting for all potential websites to be processed")
 	wg.Wait()
 	// ensure previous
