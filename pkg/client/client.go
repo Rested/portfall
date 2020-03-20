@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"portfall/pkg/favicon"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -99,6 +100,10 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 	select {
 	case <-readyCh:
 		break
+	case <-time.After(2 * time.Second):
+		close(stopCh)
+		close(readyCh)
+		return nil, fmt.Errorf("timed out of portforward after 2 seconds")
 	}
 	website := Website{
 		isForwarded:    true, // todo: ui decision as stated below
@@ -110,6 +115,7 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 	// get the favicon
 	bestIcon, err := favicon.GetBest(fmt.Sprintf("http://localhost:%d", localPort))
 	if err != nil {
+		close(stopCh)
 		return nil, err
 	}
 	website.icon = *bestIcon

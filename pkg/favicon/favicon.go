@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Icon struct {
@@ -31,6 +32,8 @@ type Icon struct {
 var LinkRels = [4]string{"icon", "shortcut icon", "apple-touch-icon", "apple-touch-icon-precomposed"}
 var MetaNames = [2]string{"msapplication-TileImage", "og:image"}
 
+
+
 func GetBest(getUrl string) (*Icon, error) {
 	parsedUrl, err := url.Parse(getUrl)
 	if err != nil {
@@ -41,7 +44,10 @@ func GetBest(getUrl string) (*Icon, error) {
 		URL:    parsedUrl,
 		Proto:  "HTTP",
 	}
-	resp, err := http.DefaultClient.Do(&req)
+	c := http.Client{
+		Timeout: 3 * time.Second,
+	}
+	resp, err := c.Do(&req)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +243,10 @@ func defaultIcon(parsedUrl *url.URL) (*Icon, error) {
 func getIconFromUrl(iconUrl *url.URL) (*Icon, error) {
 	// download icon and get extension and size
 	log.Printf("Getting icon from RemoteUrl %s", iconUrl.String())
-	resp, err := http.DefaultClient.Get(iconUrl.String())
+	c := http.Client{
+		Timeout: 3 * time.Second,
+	}
+	resp, err := c.Get(iconUrl.String())
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +255,7 @@ func getIconFromUrl(iconUrl *url.URL) (*Icon, error) {
 			"received bad status code %d attempting to retrieve icon at %s", resp.StatusCode, iconUrl.String())
 	}
 	defer resp.Body.Close()
+
 	mimeType := resp.Header.Get("content-type")
 	extensions, err := mime.ExtensionsByType(mimeType)
 	if err != nil {
@@ -256,8 +266,6 @@ func getIconFromUrl(iconUrl *url.URL) (*Icon, error) {
 		extension = extensions[0]
 	}
 	fp, size := responseToFile(*resp, extension)
-
-
 	return &Icon{
 		width:     0,
 		height:    0,
