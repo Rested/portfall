@@ -32,8 +32,6 @@ type Icon struct {
 var LinkRels = [4]string{"icon", "shortcut icon", "apple-touch-icon", "apple-touch-icon-precomposed"}
 var MetaNames = [2]string{"msapplication-TileImage", "og:image"}
 
-
-
 func GetBest(getUrl string) (*Icon, error) {
 	parsedUrl, err := url.Parse(getUrl)
 	if err != nil {

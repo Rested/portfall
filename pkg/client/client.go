@@ -53,10 +53,10 @@ type Website struct {
 }
 
 type PresentAbleWebsite struct {
-	LocalPort int32  `json:"localPort"`
-	PodPort   int32  `json:"podPort"`
-	Title     string `json:"title"`
-	IconUrl   string `json:"iconUrl"`
+	LocalPort     int32  `json:"localPort"`
+	PodPort       int32  `json:"podPort"`
+	Title         string `json:"title"`
+	IconUrl       string `json:"iconUrl"`
 	IconRemoteUrl string `json:"iconRemoteUrl"`
 }
 
@@ -96,7 +96,12 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 		StopCh:     stopCh,
 		ReadyCh:    readyCh,
 	}
-	go PortForwardAPod(portForwardReq)
+	go func() {
+		err := PortForwardAPod(portForwardReq)
+		if err != nil {
+			log.Print(err)
+		}
+	}()
 
 	select {
 	case <-readyCh:
@@ -180,10 +185,10 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 		}
 
 		pw = append(pw, &PresentAbleWebsite{
-			LocalPort: w.localPort,
-			PodPort:   w.podPort,
-			Title:     title,
-			IconUrl:   fmt.Sprintf("file://%s", w.icon.FilePath),
+			LocalPort:     w.localPort,
+			PodPort:       w.podPort,
+			Title:         title,
+			IconUrl:       fmt.Sprintf("file://%s", w.icon.FilePath),
 			IconRemoteUrl: w.icon.RemoteUrl,
 		})
 		log.Printf("Returning website %s on pod port %d to frontend", title, w.podPort)
