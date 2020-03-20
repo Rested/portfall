@@ -1,6 +1,7 @@
 package favicon
 
 // draws heavily on Scott Werner's python package https://github.com/scottwernervt/favicon
+// todo: separate into its own module
 
 import (
 	"errors"

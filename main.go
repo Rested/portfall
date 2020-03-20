@@ -23,12 +23,13 @@ func main() {
 	c := &client.Client{}
 
 	app := wails.CreateApp(&wails.AppConfig{
-		Width:  1024,
-		Height: 768,
-		Title:  "Portfall",
-		JS:     js,
-		CSS:    css,
-		Colour: "#131313",
+		Width:     1024,
+		Height:    768,
+		Title:     "Portfall",
+		JS:        js,
+		CSS:       css,
+		Colour:    "#fff",
+		Resizable: true,
 	})
 	app.Bind(c)
 	app.Bind(OpenInBrowser)
