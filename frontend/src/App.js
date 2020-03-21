@@ -148,8 +148,8 @@ function App() {
                         <Typography className={classes.title} variant="h6" noWrap>
                             Portfall
                         </Typography>
+                        {/* todo: arrange by namespace */}
                         <FormControl className={classes.formControl}>
-                            {/* todo: multiple selectedNS selection */}
                             <Autocomplete options={["All Namespaces"].concat(namespaces)}
                                           multiple
                                           value={selectedNS}

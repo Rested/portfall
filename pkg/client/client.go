@@ -336,7 +336,7 @@ func (c *Client) SetConfigPath(configPath string) string  {
 	}
 	clientSet, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Printf("error buidling clientset from config at %s", configPath)
+		log.Printf("error building clientset from config at %s", configPath)
 		return  c.configPath
 	}
 	c.configPath = configPath
