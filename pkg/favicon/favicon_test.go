@@ -60,7 +60,7 @@ func TestTagMetaIcons(t *testing.T) {
 	}
 }
 
-func TestGetTitle(t *testing.T)  {
+func TestGetTitle(t *testing.T) {
 	goog, _ := url.Parse("http://www.google.com")
 	resp, err := http.DefaultClient.Get(goog.String())
 	if err != nil {

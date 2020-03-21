@@ -21,6 +21,7 @@ import (
 	"time"
 )
 
+// Icon describes a favicon or other icon for a given website
 type Icon struct {
 	width     int
 	height    int
@@ -31,9 +32,10 @@ type Icon struct {
 	PageTitle string
 }
 
-var LinkRels = [4]string{"icon", "shortcut icon", "apple-touch-icon", "apple-touch-icon-precomposed"}
-var MetaNames = [2]string{"msapplication-TileImage", "og:image"}
+var linkRels = [4]string{"icon", "shortcut icon", "apple-touch-icon", "apple-touch-icon-precomposed"}
+var metaNames = [2]string{"msapplication-TileImage", "og:image"}
 
+// GetBest takes a url and gets the best Icon for it (where best is defined as largest file size)
 func GetBest(getUrl string) (*Icon, error) {
 	parsedUrl, err := url.Parse(getUrl)
 	if err != nil {
@@ -92,9 +94,8 @@ func getTitle(doc goquery.Document, respUrl url.URL) string {
 	return title
 }
 
-func tagMetaIcons(doc goquery.Document, respUrl url.URL) ([]*Icon, error) {
+func getTagsToFetch(doc goquery.Document) []*goquery.Selection {
 	var tagsToFetch []*goquery.Selection
-
 	// handle link nodes
 	doc.Find("link").Each(func(i int, s *goquery.Selection) {
 		rel, exists := s.Attr("rel")
@@ -102,7 +103,7 @@ func tagMetaIcons(doc goquery.Document, respUrl url.URL) ([]*Icon, error) {
 			return
 		}
 		rel = strings.ToLower(rel)
-		for _, lr := range LinkRels {
+		for _, lr := range linkRels {
 			if rel == lr {
 				tagsToFetch = append(tagsToFetch, s)
 				return
@@ -120,13 +121,18 @@ func tagMetaIcons(doc goquery.Document, respUrl url.URL) ([]*Icon, error) {
 			}
 		}
 		metaType = strings.ToLower(metaType)
-		for _, mn := range MetaNames {
+		for _, mn := range metaNames {
 			if metaType == strings.ToLower(mn) {
 				tagsToFetch = append(tagsToFetch, s)
 			}
 		}
 	})
 
+	return tagsToFetch
+}
+
+func tagMetaIcons(doc goquery.Document, respUrl url.URL) ([]*Icon, error) {
+	tagsToFetch := getTagsToFetch(doc)
 	log.Printf("Got %d icon tags for RemoteUrl %s", len(tagsToFetch), respUrl.String())
 
 	var icons []*Icon

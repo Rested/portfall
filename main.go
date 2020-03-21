@@ -8,6 +8,7 @@ import (
 	"portfall/pkg/client"
 )
 
+// open the operating system browser at the specified url
 func OpenInBrowser(openUrl string) {
 	err := browser.OpenURL(openUrl)
 	if err != nil {
