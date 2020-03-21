@@ -12,7 +12,7 @@ import (
 // todo: create a mock server for these reqs to hit
 
 func TestDefaultIcon(t *testing.T) {
-	goog, err := url.Parse("http://www.google.com")
+	goog, _ := url.Parse("http://www.google.com")
 	icon, err := defaultIcon(goog)
 	if err != nil || icon == nil {
 		t.Error(err)
@@ -78,7 +78,7 @@ func TestGetTitle(t *testing.T)  {
 }
 
 func TestGetBest(t *testing.T) {
-	goog, err := url.Parse("http://www.google.com")
+	goog, _ := url.Parse("http://www.google.com")
 	icon, err := GetBest(goog.String())
 	if err != nil {
 		t.Error(err)
