@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-// Core of Portfall - references k8s client and config and tracks active websites and namespaces
+// Client is the core struct of Portfall - references k8s client and config and tracks active websites and namespaces
 type Client struct {
 	s                *kubernetes.Clientset
 	conf             *rest.Config
