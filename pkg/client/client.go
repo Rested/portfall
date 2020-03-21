@@ -49,7 +49,7 @@ type portForwardPodRequest struct {
 }
 
 // todo: merge website and presentable website
-// Describes a website
+// website is the internal representation of a website
 type website struct {
 	isForwarded    bool
 	portForwardReq portForwardPodRequest
@@ -58,8 +58,8 @@ type website struct {
 	icon           favicon.Icon
 }
 
-// A port-forwarded as presented to the client
-type PresentAbleWebsite struct {
+// PresentableWebsite is the client representation of a port-forwarded website
+type PresentableWebsite struct {
 	LocalPort     int32  `json:"localPort"`
 	PodPort       int32  `json:"podPort"`
 	Title         string `json:"title"`
@@ -206,6 +206,40 @@ func (c *Client) handleWebsiteAdding(p v1.Pod, tp int32, resourceName string, re
 	}
 }
 
+func (c *Client) handleServicesInPod(services *v1.ServiceList, pod v1.Pod, wg *sync.WaitGroup, queue chan *website) (handledPorts []int32) {
+	for _, svc := range services.Items {
+		matchCount := 0
+		for k, v := range svc.Spec.Selector {
+			if pod.Labels[k] == v {
+				matchCount++
+			}
+		}
+		if matchCount == len(svc.Spec.Selector) {
+			for _, port := range svc.Spec.Ports {
+				handledPorts = append(handledPorts, port.TargetPort.IntVal)
+				wg.Add(1)
+				go c.handleWebsiteAdding(pod, port.TargetPort.IntVal, svc.Name, "service", queue)
+			}
+		}
+	}
+	return handledPorts
+}
+
+func (c *Client) handleContainerPortsInPod(pod v1.Pod, handledPorts []int32, wg *sync.WaitGroup, queue chan *website) {
+	for _, container := range pod.Spec.Containers {
+	cpLoop:
+		for _, port := range container.Ports {
+			for _, hp := range handledPorts {
+				if port.ContainerPort == hp {
+					continue cpLoop
+				}
+			}
+			wg.Add(1)
+			go c.handleWebsiteAdding(pod, port.ContainerPort, container.Name, "container", queue)
+		}
+	}
+}
+
 func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) ([]*website, error) {
 	var nsWebsites []*website
 	internalNS := namespace
@@ -226,36 +260,10 @@ func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) ([]*
 	var wg sync.WaitGroup
 	queue := make(chan *website, 1)
 	for _, pod := range pods.Items {
-		var handledPorts []int32
 		// services
-		for _, svc := range services.Items {
-			matchCount := 0
-			for k, v := range svc.Spec.Selector {
-				if pod.Labels[k] == v {
-					matchCount++
-				}
-			}
-			if matchCount == len(svc.Spec.Selector) {
-				for _, port := range svc.Spec.Ports {
-					handledPorts = append(handledPorts, port.TargetPort.IntVal)
-					wg.Add(1)
-					go c.handleWebsiteAdding(pod, port.TargetPort.IntVal, svc.Name, "service", queue)
-				}
-			}
-		}
+		handledPorts := c.handleServicesInPod(services, pod, &wg, queue)
 		// container ports
-		for _, container := range pod.Spec.Containers {
-		cpLoop:
-			for _, port := range container.Ports {
-				for _, hp := range handledPorts {
-					if port.ContainerPort == hp {
-						continue cpLoop
-					}
-				}
-				wg.Add(1)
-				go c.handleWebsiteAdding(pod, port.ContainerPort, container.Name, "container", queue)
-			}
-		}
+		c.handleContainerPortsInPod(pod, handledPorts, &wg, queue)
 	}
 	go func() {
 		for w := range queue {
@@ -312,7 +320,7 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 		}
 	}
 	c.activeNamespaces = append(c.activeNamespaces, namespace)
-	pw := make([]*PresentAbleWebsite, 0, len(nsWebsites))
+	pw := make([]*PresentableWebsite, 0, len(nsWebsites))
 	log.Printf("will return %d PresentAbleWebsites", len(nsWebsites))
 	for _, w := range nsWebsites {
 		title := w.icon.PageTitle
@@ -320,7 +328,7 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 			title = w.portForwardReq.Pod.Name
 		}
 
-		pw = append(pw, &PresentAbleWebsite{
+		pw = append(pw, &PresentableWebsite{
 			LocalPort:     w.localPort,
 			PodPort:       w.podPort,
 			Title:         title,
