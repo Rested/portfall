@@ -28,7 +28,7 @@ import (
 type Client struct {
 	s                *kubernetes.Clientset
 	conf             *rest.Config
-	configPath 		 string
+	configPath       string
 	websites         []*website
 	activeNamespaces []string
 }
@@ -195,19 +195,19 @@ websiteLoop:
 	c.websites = newWebsites
 }
 
-func (c *Client) handleWebsiteAdding(p v1.Pod, tp int32, resourceName string, resourceType string, wg *sync.WaitGroup, websiteList []*website) {
-	defer wg.Done()
-	website, err := c.getWebsiteForPort(p, tp)
+func (c *Client) handleWebsiteAdding(p v1.Pod, tp int32, resourceName string, resourceType string, queue chan *website) {
+	ws, err := c.getWebsiteForPort(p, tp)
 	if err != nil {
 		log.Printf("Failed to get icons for pod %s in %s %s on port %d", p.Name, resourceName, resourceType, tp)
 		log.Print(err)
+		queue <- &website{}
 	} else {
-		websiteList = append(websiteList, website)
+		queue <- ws
 	}
 }
 
-func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) (nsWebsites []*website, err error) {
-
+func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) ([]*website, error) {
+	var nsWebsites []*website
 	internalNS := namespace
 	if namespace == "All Namespaces" {
 		internalNS = ""
@@ -224,6 +224,7 @@ func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) (nsW
 	}
 
 	var wg sync.WaitGroup
+	queue := make(chan *website, 1)
 	for _, pod := range pods.Items {
 		var handledPorts []int32
 		// services
@@ -238,7 +239,7 @@ func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) (nsW
 				for _, port := range svc.Spec.Ports {
 					handledPorts = append(handledPorts, port.TargetPort.IntVal)
 					wg.Add(1)
-					go c.handleWebsiteAdding(pod, port.TargetPort.IntVal, svc.Name, "service", &wg, nsWebsites)
+					go c.handleWebsiteAdding(pod, port.TargetPort.IntVal, svc.Name, "service", queue)
 				}
 			}
 		}
@@ -252,13 +253,23 @@ func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) (nsW
 					}
 				}
 				wg.Add(1)
-				go c.handleWebsiteAdding(pod, port.ContainerPort, container.Name, "container", &wg, nsWebsites)
+				go c.handleWebsiteAdding(pod, port.ContainerPort, container.Name, "container", queue)
 			}
 		}
 	}
+	go func() {
+		for w := range queue {
+			log.Printf("received website forwarded (%t) to port %d from chan!", w.isForwarded, w.localPort)
+			if w.isForwarded {
+				nsWebsites = append(nsWebsites, w)
+			}
+			wg.Done()
+		}
+	}()
 
 	log.Printf("waiting for all potential websites to be processed")
 	wg.Wait()
+	log.Printf("%d websites processed", len(nsWebsites))
 	return nsWebsites, nil
 }
 
@@ -277,12 +288,15 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 	}
 
 	var nsWebsites []*website
+	var err error
 	if !skip {
-		nsWebsites, err := c.forwardAndGetIconsForWebsitesInNamespace(namespace)
+		nsWebsites, err = c.forwardAndGetIconsForWebsitesInNamespace(namespace)
 		if err != nil {
 			log.Print(err)
 			return ""
 		}
+		log.Printf("Got %d websites forwarded in ns %s", len(nsWebsites), namespace)
+
 		if namespace == "All Namespaces" {
 			c.websites = nsWebsites
 		} else {
@@ -299,6 +313,7 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 	}
 	c.activeNamespaces = append(c.activeNamespaces, namespace)
 	pw := make([]*PresentAbleWebsite, 0, len(nsWebsites))
+	log.Printf("will return %d PresentAbleWebsites", len(nsWebsites))
 	for _, w := range nsWebsites {
 		title := w.icon.PageTitle
 		if title == "" {
@@ -346,7 +361,7 @@ func (c *Client) GetCurrentConfigPath() string {
 
 // SetConfigPath takes a configPath string and tries to configure the Client for that config. If it was successful
 // the configPath is returned. Otherwise the old configPath is returned.
-func (c *Client) SetConfigPath(configPath string) string  {
+func (c *Client) SetConfigPath(configPath string) string {
 	config, err := clientcmd.BuildConfigFromFlags("", configPath)
 	if err != nil {
 		log.Printf("error building config from path %s", configPath)
@@ -355,13 +370,14 @@ func (c *Client) SetConfigPath(configPath string) string  {
 	clientSet, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		log.Printf("error building clientset from config at %s", configPath)
-		return  c.configPath
+		return c.configPath
 	}
 	c.configPath = configPath
 	c.conf = config
 	c.s = clientSet
 	return configPath
 }
+
 // todo: search for all config files and present them in ui - autodetect
 
 func homeDir() string {
