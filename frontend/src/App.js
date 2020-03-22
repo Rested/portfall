@@ -7,7 +7,7 @@ import Typography from "@material-ui/core/Typography";
 import Autocomplete from '@material-ui/lab/Autocomplete';
 import TextField from "@material-ui/core/TextField";
 import Grid from "@material-ui/core/Grid";
-import {Close, Launch, MoodBadTwoTone, Settings} from "@material-ui/icons";
+import {Close, Folder, Launch, MoodBadTwoTone, Settings} from "@material-ui/icons";
 import Alert from "@material-ui/lab/Alert";
 import {Card, CircularProgress} from "@material-ui/core";
 import Avatar from "@material-ui/core/Avatar";
@@ -17,6 +17,7 @@ import createMuiTheme from "@material-ui/core/styles/createMuiTheme";
 import {ThemeProvider} from "@material-ui/styles";
 import Popper from "@material-ui/core/Popper";
 import CardContent from "@material-ui/core/CardContent";
+import IconButton from "@material-ui/core/IconButton";
 
 const useStyles = makeStyles(theme => ({
     formControl: {
@@ -81,6 +82,7 @@ function App() {
     const [loading, setLoading] = useState(true);
     const [websites, setWebsites] = useState([]);
     const [showConfig, setShowConfig] = useState(false);
+    const [configMessage, setConfigMessage] = useState(null);
 
     useEffect(() => {
         window.backend.Client.GetCurrentConfigPath().then(cp => {
@@ -203,7 +205,7 @@ function App() {
                                                 subheader={<span><b>{localPort}</b>:{podPort}</span>} action={
                                         <Button endIcon={<Launch/>} size="small" color="primary"
                                                 onClick={() =>
-                                                    window.backend.OpenInBrowser(`http://localhost:${localPort}`)}>
+                                                    window.backend.PortfallOS.OpenInBrowser(`http://localhost:${localPort}`)}>
                                             Open
                                         </Button>}/>
 
@@ -213,14 +215,15 @@ function App() {
                         {loading ? <Grid item xs={12} style={{textAlign: 'center'}}><CircularProgress/></Grid> : null}
                     </Grid>
                 </div>
-                <Button variant="contained" color="primary" style={{position: 'fixed', bottom: 10, right: 10}}
-                        onClick={(e) => {
-                            setAnchorEl(e.currentTarget);
-                            setShowConfig(!showConfig)
-                        }}
-                        endIcon={<Settings/>}>
-                    Config
-                </Button>
+                <IconButton variant="contained" color="primary" style={{position: 'fixed', bottom: 10, right: 10}}
+                            size="medium"
+                            onClick={(e) => {
+                                setAnchorEl(e.currentTarget);
+                                setShowConfig(!showConfig)
+                            }}
+                >
+                    <Settings/>
+                </IconButton>
 
 
                 <Popper open={showConfig} anchorEl={anchorEl} placement="top-end"
@@ -234,19 +237,55 @@ function App() {
                                 // element: arrowRef,
                             },
                         }}>
-                    <Card>
-                        <CardHeader title="Portfall config" action={<Button style={{verticalAlign: 'middle'}} onClick={()=> setShowConfig(false)}><Close /></Button>}/>
+                    <Card square style={{width: "50vw"}}>
+                        <CardHeader title="Portfall config" action={<IconButton style={{verticalAlign: 'middle'}}
+                                                                                onClick={() => setShowConfig(false)}><Close/></IconButton>}/>
                         <CardContent>
-                            <TextField fullWidth style={{display: "flex"}} defaultValue={configFilePath}
-                                       disabled={false} label="Kubernetes config file" inputRef={confPathEl}/>
-                            <br/>
-                            <Button color="secondary" variant="contained" onClick={() => {
-                                window.backend.Client.SetConfigPath(confPathEl.current.value).then((rv) => {
-                                    if (rv === confPathEl.current.value) {
-                                        setConfigFilePath(rv);
-                                    }
-                                })
-                            }}>Update Config</Button>
+
+                            <Grid container spacing={3}>
+                                <Grid item xs={8}>
+                                    <TextField defaultValue={configFilePath} fullWidth
+                                               disabled={false} label="Kubernetes config file" inputRef={confPathEl}/>
+                                </Grid>
+                                <Grid item xs={4} style={{alignSelf: "flex-end", textAlign: "end"}}>
+                                    <Button variant="contained" color="secondary" endIcon={<Folder/>}
+                                            onClick={() => {
+                                                window.backend.PortfallOS.OpenFile().then(f => {
+                                                    if (f) {
+                                                        confPathEl.current.value = f;
+                                                    }
+                                                })
+                                            }}>Browse</Button>
+                                </Grid>
+                                {configMessage ? (
+                                    <Grid item xs={12}>
+                                        <Alert severity={configMessage.severity} onClose={() => {
+                                            setConfigMessage(null)
+                                        }}>
+                                            {configMessage.message}
+                                        </Alert>
+                                    </Grid>) : null}
+                                <Grid item xs={12} style={{textAlign: "center"}}>
+                                    <Button color="primary" variant="outlined" onClick={() => {
+                                        window.backend.Client.SetConfigPath(confPathEl.current.value).then((rv) => {
+                                            if (rv === confPathEl.current.value) {
+                                                setConfigFilePath(rv);
+                                                setConfigMessage({
+                                                    severity: "success",
+                                                    message: `Successfully changed config to path ${rv}`
+                                                })
+                                            } else {
+                                                setConfigMessage({
+                                                    severity: "error",
+                                                    message: `Failed to change config to path ${confPathEl.current.value}`
+                                                });
+                                                confPathEl.current.value = rv;
+                                            }
+                                        })
+                                    }}>Update Config</Button>
+                                </Grid>
+                            </Grid>
+
                         </CardContent>
 
                     </Card>

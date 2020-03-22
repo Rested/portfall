@@ -155,7 +155,7 @@ func (c *Client) ListNamespaces() (nsList []string) {
 	namespaces, err := c.s.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
 		log.Printf("Found no namespaces %v", err)
-		return nsList
+		return make([]string, 0)
 	}
 	for _, ns := range namespaces.Items {
 		nsList = append(nsList, ns.Name)
@@ -380,9 +380,15 @@ func (c *Client) SetConfigPath(configPath string) string {
 		log.Printf("error building clientset from config at %s", configPath)
 		return c.configPath
 	}
+
+	namespaces, err := clientSet.CoreV1().Namespaces().List(metav1.ListOptions{})
+	if err != nil || len(namespaces.Items) == 0 {
+		log.Printf("no namespaces in cluster with config path %s - could be a connection issue", configPath)
+		return c.configPath
+	}
+	c.s = clientSet
 	c.configPath = configPath
 	c.conf = config
-	c.s = clientSet
 	return configPath
 }
 
@@ -400,11 +406,16 @@ func (c *Client) WailsInit(_ *wails.Runtime) error {
 	s, conf, confPath, err := getDefaultClientSetAndConfig()
 	if err != nil {
 		log.Printf("failed to get default config")
-	} else {
-		c.s = s
-		c.conf = conf
-		c.configPath = confPath
+		return nil
 	}
+	namespaces, err := s.CoreV1().Namespaces().List(metav1.ListOptions{})
+	if err != nil || len(namespaces.Items) == 0 {
+		log.Printf("no namespaces in cluster with config path %s - could be a connection issue", confPath)
+		return nil
+	}
+	c.s = s
+	c.conf = conf
+	c.configPath = confPath
 	return nil
 }
 

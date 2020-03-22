@@ -2,19 +2,10 @@ package main
 
 import (
 	"github.com/leaanthony/mewn"
-	"github.com/pkg/browser"
 	"github.com/wailsapp/wails"
-	"log"
 	"portfall/pkg/client"
+	"portfall/pkg/os"
 )
-
-// OpenInBrowser opens the operating system browser at the specified url
-func OpenInBrowser(openUrl string) {
-	err := browser.OpenURL(openUrl)
-	if err != nil {
-		log.Print(err)
-	}
-}
 
 func main() {
 
@@ -22,6 +13,7 @@ func main() {
 	css := mewn.String("./frontend/build/static/css/main.css")
 
 	c := &client.Client{}
+	o := &os.PortfallOS{}
 
 	app := wails.CreateApp(&wails.AppConfig{
 		Width:     1024,
@@ -33,6 +25,6 @@ func main() {
 		Resizable: true,
 	})
 	app.Bind(c)
-	app.Bind(OpenInBrowser)
+	app.Bind(o)
 	app.Run()
 }
