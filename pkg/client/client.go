@@ -399,7 +399,7 @@ func homeDir() string {
 func (c *Client) WailsInit(_ *wails.Runtime) error {
 	s, conf, confPath, err := getDefaultClientSetAndConfig()
 	if err != nil {
-		log.Printf("failed ot get default config")
+		log.Printf("failed to get default config")
 	} else {
 		c.s = s
 		c.conf = conf
