@@ -407,3 +407,11 @@ func (c *Client) WailsInit(runtime *wails.Runtime) error {
 	}
 	return nil
 }
+
+// WailsShutdown is called on shutdown and cleans up all port-forwards still active
+func (c *Client) WailsShutdown() {
+	for _, w := range c.websites {
+		log.Printf("closing port forward on port %d of pod %s", w.podPort, w.portForwardReq.Pod.Name)
+		close(w.portForwardReq.StopCh)
+	}
+}
