@@ -396,7 +396,7 @@ func homeDir() string {
 }
 
 // WailsInit takes the wails runtime and does some initialization - sets up the default client if possible
-func (c *Client) WailsInit(runtime *wails.Runtime) error {
+func (c *Client) WailsInit(_ *wails.Runtime) error {
 	s, conf, confPath, err := getDefaultClientSetAndConfig()
 	if err != nil {
 		log.Printf("failed ot get default config")
