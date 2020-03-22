@@ -1,0 +1,28 @@
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10name: Test
+jobs:
+  package:
+    strategy:
+      matrix:
+        go-version: [1.14.x]
+        platform: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Get wails
+      run: go get -u github.com/wailsapp/wails/cmd/wails
+    - name: Build package
+      run: wails build -p
+      if: ${{ matrix.platform }} != "ubuntu-latest"
+    - name: Build binary
+      run: wails build
+      if: ${{ matrix.platform }} == "ubuntu-latest"
+
