@@ -26,6 +26,9 @@ jobs:
         mkdir -p ~/.wails
         cp wails.json ~/.wails/
         wails build -p
+        echo "turning the .app into a .dmg"
+        npm install -g appdmg
+        appdmg dmg-spec.json Portfall.dmg
       if: matrix.platform == 'macos-latest'
     - name: Build package linux
       run: |
@@ -46,3 +49,43 @@ jobs:
         choco install mingw
         wails build -p
       if: matrix.platform == 'windows-latest'
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    - name: Upload OSX package
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./Portfall.dmg
+          asset_name: Portfall.dmg
+          asset_content_type: application/octet-stream
+    - name: Upload Linux package
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+        asset_path: ./portfall
+        asset_name: portfall
+        asset_content_type: application/octet-stream
+    - name: Upload Windows package
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+        asset_path: ./portfall.exe
+        asset_name: Portfall.exe
+        asset_content_type: application/octet-stream
