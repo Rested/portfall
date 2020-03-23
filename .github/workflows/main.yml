@@ -26,6 +26,7 @@ jobs:
         mkdir -p ~/.wails
         cp wails.json ~/.wails/
         wails build -p
+        ls
         echo "turning the .app into a .dmg"
         npm install -g appdmg
         appdmg dmg-spec.json Portfall.dmg
@@ -60,15 +61,15 @@ jobs:
         draft: false
         prerelease: false
     - name: Upload OSX package
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./Portfall.dmg
-          asset_name: Portfall.dmg
-          asset_content_type: application/octet-stream
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+        asset_path: ./Portfall.dmg
+        asset_name: Portfall.dmg
+        asset_content_type: application/octet-stream
     - name: Upload Linux package
       id: upload-release-asset
       uses: actions/upload-release-asset@v1
