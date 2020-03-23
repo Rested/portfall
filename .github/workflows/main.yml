@@ -95,9 +95,9 @@ jobs:
         asset_name: Portfall.dmg
         asset_content_type: application/octet-stream
     - name: Download linux package
-        uses: actions/download-artifact@v1
-        with:
-          name: portfall
+      uses: actions/download-artifact@v1
+      with:
+        name: portfall
     - name: Upload Linux package to release
       id: upload-linux-release-asset
       uses: actions/upload-release-asset@v1
