@@ -23,6 +23,8 @@ jobs:
       run: |
         export PATH=${PATH}:`go env GOPATH`/bin
         echo "building on ${{ matrix.platform }}"
+        mkdir -p ~/.wails
+        cp wails.json ~/.wails/
         wails build -p
       if: matrix.platform == 'macos-latest'
     - name: Build package linux
@@ -30,6 +32,8 @@ jobs:
         sudo apt update && sudo apt install -y libgtk-3-dev libwebkit2gtk-4.0-dev
         export PATH=${PATH}:`go env GOPATH`/bin
         echo "building on ${{ matrix.platform }}"
+        mkdir -p ~/.wails
+        cp wails.json ~/.wails/
         wails build
       if: matrix.platform == 'ubuntu-latest'
     - name: Build package windows
@@ -37,5 +41,7 @@ jobs:
         $GP = (go env GOPATH)
         setx path "%path%;%GP%"
         echo "building on ${{ matrix.platform }}"
+        New-Item -ItemType directory -Path "$HOME\.wails" -Force
+        Copy-Item -Path "$PWD\wails.json" -Destination "$HOME\.wails\wails.json"
         iex "$GP\bin\wails build -p"
       if: matrix.platform == 'windows-latest'
