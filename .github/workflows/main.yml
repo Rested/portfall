@@ -43,5 +43,6 @@ jobs:
         echo "building on ${{ matrix.platform }}"
         New-Item -ItemType directory -Path "$HOME\.wails" -Force
         Copy-Item -Path "$PWD\wails.json" -Destination "$HOME\.wails\wails.json"
+        choco install mingw
         iex "$GP\bin\wails build -p"
       if: matrix.platform == 'windows-latest'
