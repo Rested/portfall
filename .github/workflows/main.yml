@@ -22,20 +22,20 @@ jobs:
     - name: Build package osx
       run: |
         export PATH=${PATH}:`go env GOPATH`/bin
-        echo building on ${{ matrix.platform }}
+        echo "building on ${{ matrix.platform }}"
         wails build -p
       if: matrix.platform == 'macos-latest'
     - name: Build package linux
       run: |
         sudo apt update && sudo apt install -y libgtk-3-dev libwebkit2gtk-4.0-dev
         export PATH=${PATH}:`go env GOPATH`/bin
-        echo building on ${{ matrix.platform }}
+        echo "building on ${{ matrix.platform }}"
         wails build
       if: matrix.platform == 'ubuntu-latest'
     - name: Build package windows
       run: |
-        FOR /F "tokens=*" %g IN ('go env GOPATH') do (SET GBP=%g)
-        setx path "%path%;%GBP%"
-        echo building on ${{ matrix.platform }}
+        $GP = (go env GOPATH)
+        setx path "%path%;%GP%"
+        echo "building on ${{ matrix.platform }}"
         wails build
       if: matrix.platform == 'windows-latest'
