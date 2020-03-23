@@ -53,24 +53,25 @@ jobs:
     - name: upload artifact osx
       uses: actions/upload-artifact@v1
       with:
-        name: Portfall.dmg
+        name: portfall-osx
         path: Portfall.dmg
       if: matrix.platform == 'macos-latest'
     - name: upload artifact linux
       uses: actions/upload-artifact@v1
       with:
-        name: portfall
+        name: portfall-linux
         path: portfall
       if: matrix.platform == 'ubuntu-latest'
     - name: upload artifact windows
       uses: actions/upload-artifact@v1
       with:
-        name: portfall.exe
+        name: portfall-windows
         path: portfall.exe
       if: matrix.platform == 'windows-latest'
 
   release:
     runs-on: ubuntu-latest
+    needs: package
     steps:
     - name: Create Release
       id: create_release
@@ -85,7 +86,7 @@ jobs:
     - name: Download osx package
       uses: actions/download-artifact@v1
       with:
-        name: Portfall.dmg
+        name: portfall-osx
     - name: Upload OSX package to release
       id: upload-osx-release-asset
       uses: actions/upload-release-asset@v1
@@ -99,7 +100,7 @@ jobs:
     - name: Download linux package
       uses: actions/download-artifact@v1
       with:
-        name: portfall
+        name: portfall-linux
     - name: Upload Linux package to release
       id: upload-linux-release-asset
       uses: actions/upload-release-asset@v1
@@ -113,7 +114,7 @@ jobs:
     - name: Download windows package
       uses: actions/download-artifact@v1
       with:
-        name: portfall.exe
+        name: portfall-windows
     - name: Upload Windows package to release
       id: upload-windows-release-asset
       uses: actions/upload-release-asset@v1
