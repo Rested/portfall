@@ -20,9 +20,14 @@ jobs:
     - name: Get wails
       run: go get -u github.com/wailsapp/wails/cmd/wails
     - name: Build package
-      run: wails build -p
-      if: ${{ matrix.platform }} != "ubuntu-latest"
+      run: |
+        export PATH=${PATH}:`go env GOPATH`/bin
+        echo building on ${{ matrix.platform }}
+        wails build -p
+      if: ${{ matrix.platform }} != 'ubuntu-latest'
     - name: Build binary
-      run: wails build
-      if: ${{ matrix.platform }} == "ubuntu-latest"
-
+      run: |
+        export PATH=${PATH}:`go env GOPATH`/bin
+        echo building on ${{ matrix.platform }}
+        wails build
+      if: ${{ matrix.platform }} == 'ubuntu-latest'
