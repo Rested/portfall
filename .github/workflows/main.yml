@@ -70,6 +70,8 @@ jobs:
       if: matrix.platform == 'windows-latest'
 
   release:
+    runs-on: ubuntu-latest
+    steps:
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
