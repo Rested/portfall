@@ -37,5 +37,5 @@ jobs:
         $GP = (go env GOPATH)
         setx path "%path%;%GP%"
         echo "building on ${{ matrix.platform }}"
-        wails build
+        iex "$GP\bin\wails build -p"
       if: matrix.platform == 'windows-latest'
