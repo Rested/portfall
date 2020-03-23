@@ -70,6 +70,7 @@ jobs:
         asset_path: ./Portfall.dmg
         asset_name: Portfall.dmg
         asset_content_type: application/octet-stream
+      if: matrix.platform == 'macos-latest'
     - name: Upload Linux package
       id: upload-linux-release-asset
       uses: actions/upload-release-asset@v1
@@ -80,6 +81,7 @@ jobs:
         asset_path: ./portfall
         asset_name: portfall
         asset_content_type: application/octet-stream
+      if: matrix.platform == 'ubuntu-latest'
     - name: Upload Windows package
       id: upload-windows-release-asset
       uses: actions/upload-release-asset@v1
@@ -90,3 +92,4 @@ jobs:
         asset_path: ./portfall.exe
         asset_name: Portfall.exe
         asset_content_type: application/octet-stream
+      if: matrix.platform == 'windows-latest'
