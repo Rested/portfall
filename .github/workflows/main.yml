@@ -39,10 +39,10 @@ jobs:
     - name: Build package windows
       run: |
         $GP = (go env GOPATH)
-        setx path "%path%;%GP%"
+        $env:path = "$env:path;$GP\bin"
         echo "building on ${{ matrix.platform }}"
         New-Item -ItemType directory -Path "$HOME\.wails" -Force
         Copy-Item -Path "$PWD\wails.json" -Destination "$HOME\.wails\wails.json"
         choco install mingw
-        iex "$GP\bin\wails build -p"
+        wails build -p
       if: matrix.platform == 'windows-latest'
