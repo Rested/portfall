@@ -50,6 +50,26 @@ jobs:
         choco install mingw
         wails build -p
       if: matrix.platform == 'windows-latest'
+    - name: upload artifact osx
+      uses: actions/upload-artifact@v1
+      with:
+        name: Portfall.dmg
+        path: Portfall.dmg
+      if: matrix.platform == 'macos-latest'
+    - name: upload artifact linux
+      uses: actions/upload-artifact@v1
+      with:
+        name: portfall
+        path: portfall
+      if: matrix.platform == 'ubuntu-latest'
+    - name: upload artifact windows
+      uses: actions/upload-artifact@v1
+      with:
+        name: portfall.exe
+        path: portfall.exe
+      if: matrix.platform == 'windows-latest'
+
+  release:
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -60,7 +80,11 @@ jobs:
         release_name: Release ${{ github.ref }}
         draft: false
         prerelease: false
-    - name: Upload OSX package
+    - name: Download osx package
+      uses: actions/download-artifact@v1
+      with:
+        name: Portfall.dmg
+    - name: Upload OSX package to release
       id: upload-osx-release-asset
       uses: actions/upload-release-asset@v1
       env:
@@ -70,8 +94,11 @@ jobs:
         asset_path: ./Portfall.dmg
         asset_name: Portfall.dmg
         asset_content_type: application/octet-stream
-      if: matrix.platform == 'macos-latest'
-    - name: Upload Linux package
+    - name: Download linux package
+        uses: actions/download-artifact@v1
+        with:
+          name: portfall
+    - name: Upload Linux package to release
       id: upload-linux-release-asset
       uses: actions/upload-release-asset@v1
       env:
@@ -81,8 +108,11 @@ jobs:
         asset_path: ./portfall
         asset_name: portfall
         asset_content_type: application/octet-stream
-      if: matrix.platform == 'ubuntu-latest'
-    - name: Upload Windows package
+    - name: Download windows package
+      uses: actions/download-artifact@v1
+      with:
+        name: portfall.exe
+    - name: Upload Windows package to release
       id: upload-windows-release-asset
       uses: actions/upload-release-asset@v1
       env:
@@ -92,4 +122,3 @@ jobs:
         asset_path: ./portfall.exe
         asset_name: Portfall.exe
         asset_content_type: application/octet-stream
-      if: matrix.platform == 'windows-latest'
