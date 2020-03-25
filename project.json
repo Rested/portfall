@@ -5,8 +5,8 @@
   "name": "Reuben Thomas-Davis",
   "email": "reuben@rekon.uk"
  },
- "version": "0.1.0",
- "binaryname": "portfall",
+ "version": "v0.2.0",
+ "binaryname": "Portfall",
  "frontend": {
   "dir": "frontend",
   "install": "npm install",
@@ -14,5 +14,5 @@
   "bridge": "src",
   "serve": "npm run start"
  },
- "WailsVersion": ""
+ "WailsVersion": "v1.0.2"
 }
