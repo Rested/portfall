@@ -1,0 +1,70 @@
+name: portfall
+version: git
+summary: A tiny k8s port-forwarding portal for easy access to all your cluster UIs.
+description: |
+  Portfall offers a unified UI for accessing the webapps in your Kubernetes cluster through port-forwarding
+confinement: classic
+base: core18
+icon: appicon.png
+title: Portfall
+license: MIT
+
+parts:
+  portfall:
+    plugin: go
+    go-importpath: github.com/rekon-oss/portfall
+    source: .
+    source-type: git
+    build-snaps:
+      - node/13/stable
+    build-packages:
+      - gcc
+      - libgtk-3-dev
+      - libwebkit2gtk-4.0-dev
+    override-build: |
+      go get -u github.com/wailsapp/wails/cmd/wails
+      PATH="$PATH:/root/go/bin"
+      wails build
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cp Portfall $SNAPCRAFT_PART_INSTALL/bin/
+      mkdir -pv $SNAPCRAFT_PART_INSTALL/meta/gui/
+      cp appicon.png $SNAPCRAFT_PART_INSTALL/meta/gui/
+      cp Portfall.desktop $SNAPCRAFT_PART_INSTALL/usr/share/applications/
+    stage-packages:
+      - libgtk-3-dev
+      - libwebkit2gtk-4.0-dev
+apps:
+  portfall:
+    command: bin/Portfall
+    desktop: usr/share/applications/Portfall.desktop
+
+
+# -- confinement: strict elements --
+#plugs:
+#  fs-access:
+#    interface: system-files
+#    read:
+#      - /tmp
+#      - /home
+#    write:
+#      - /tmp
+#
+#plugs:
+#  config-foo:
+#    interface: personal-files
+#    read:
+#      - $HOME/.config/foo
+#apps:
+#  portfall:
+#    extensions: [gnome-3-28]
+#    slots:
+#      - dbus-daemon
+#slots:
+#  dbus-daemon:
+#    interface: dbus
+#    bus: session
+#    name: com.github.rekon-oss.portfall
+
+#layout:
+#  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.0:
+#    bind: $SNAP/gnome-platform/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.0

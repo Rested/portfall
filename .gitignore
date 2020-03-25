@@ -1,7 +1,7 @@
 # ides
 .idea
 .vscode
-# binary
+# binary/packaging
 portfall
 Portfall
 porfall.exe
@@ -10,3 +10,4 @@ portfall-res.syso
 Portfall-res.syso
 portfall.app
 Portfall.app
+*.snap
