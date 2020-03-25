@@ -154,7 +154,8 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*website, e
 func (c *Client) ListNamespaces() (nsList []string) {
 	namespaces, err := c.s.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
-		log.Printf("Found no namespaces %v", err)
+		log.Printf("Found no namespaces")
+		log.Print(err)
 		return make([]string, 0)
 	}
 	for _, ns := range namespaces.Items {
