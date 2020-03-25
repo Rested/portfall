@@ -368,10 +368,13 @@ func (c *Client) GetCurrentConfigPath() string {
 	return c.configPath
 }
 
+// todo: select context https://github.com/kubernetes/client-go/issues/192
+
 // SetConfigPath takes a configPath string and tries to configure the Client for that config. If it was successful
 // the configPath is returned. Otherwise the old configPath is returned.
 func (c *Client) SetConfigPath(configPath string) string {
 	config, err := clientcmd.BuildConfigFromFlags("", configPath)
+
 	if err != nil {
 		log.Printf("error building config from path %s", configPath)
 		return c.configPath
