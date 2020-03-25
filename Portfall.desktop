@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Portfall
 Exec=portfall
-Icon=appicon.png
+Icon=meta/gui/appicon.png
 Type=Application
 Categories=GTK;GNOME;Utility;Development;
