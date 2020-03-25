@@ -2,10 +2,10 @@ name: portfall
 version: git
 summary: A tiny k8s port-forwarding portal for easy access to all your cluster UIs.
 description: |
-  Portfall offers a unified UI for accessing the webapps in your Kubernetes cluster through port-forwarding
+  Portfall offers a unified UI for accessing the webapps in your Kubernetes clusters through port-forwarding.
 confinement: classic
 base: core18
-icon: appicon.png
+icon: meta/gui/appicon.png
 title: Portfall
 license: MIT
 
@@ -38,6 +38,11 @@ apps:
     command: bin/Portfall
     desktop: usr/share/applications/Portfall.desktop
 
+architectures:
+  - amd64
+  - arm64
+  - i386
+  - armhf
 
 # -- confinement: strict elements --
 #plugs:
@@ -45,7 +50,6 @@ apps:
 #    interface: system-files
 #    read:
 #      - /tmp
-#      - /home
 #    write:
 #      - /tmp
 #
@@ -53,7 +57,9 @@ apps:
 #  config-foo:
 #    interface: personal-files
 #    read:
-#      - $HOME/.config/foo
+#      - $HOME/.config/k3d
+#      - $HOME/.kube
+#      - $HOME/.minikube/config/
 #apps:
 #  portfall:
 #    extensions: [gnome-3-28]
