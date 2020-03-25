@@ -125,3 +125,18 @@ jobs:
         asset_path: ./portfall-windows/Portfall.exe
         asset_name: Portfall.exe
         asset_content_type: application/octet-stream
+
+#  snapify:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Check out Git repository
+#        uses: actions/checkout@v2
+#      - name: Install Snapcraft
+#        uses: samuelmeuli/action-snapcraft@v1
+#        with:
+#          snapcraft_token: ${{ secrets.snapcraft_token }}
+#          use_lxd: true
+#      - name: Build snap
+#        run: snapcraft --use-lxd
+#      - name: Release snap
+#        run: snapcraft push --release=stable portfall_*.snap
