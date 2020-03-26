@@ -104,7 +104,7 @@ function App() {
     }, [configFilePath]);
 
     useEffect(() => {
-        if (selectedNS !== null) {
+        if (selectedNS !== null && prevSelectedNS !== selectedNS) {
             setLoading(true)
             // get ns to add
             const nsToAdd = selectedNS.find(ns => !(prevSelectedNS || []).includes(ns));
@@ -139,14 +139,25 @@ function App() {
             }
 
         }
-    }, [selectedNS]);
+    }, [selectedNS, prevSelectedNS, websites]);
 
 
     return (
         <ThemeProvider theme={theme}>
+            <img src="/blueicon.png" style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                margin: "auto",
+                width: "60%",
+                opacity: 0.01
+            }}/>
             <div id="app" className="App">
                 <AppBar id="Controls">
                     <Toolbar>
+                        <img src="/whiteicon.png" style={{width: 40, marginRight: "1em"}}/>
                         <Typography className={classes.title} variant="h6" noWrap>
                             Portfall
                         </Typography>
