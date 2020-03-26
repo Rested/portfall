@@ -5,7 +5,7 @@ description: |
   Portfall offers a unified UI for accessing the webapps in your Kubernetes clusters through port-forwarding.
 confinement: classic
 base: core18
-icon: meta/gui/appicon.png
+icon: appicon.png
 title: Portfall
 license: MIT
 
