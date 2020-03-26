@@ -18,6 +18,9 @@ import {ThemeProvider} from "@material-ui/styles";
 import Popper from "@material-ui/core/Popper";
 import CardContent from "@material-ui/core/CardContent";
 import IconButton from "@material-ui/core/IconButton";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+import InputLabel from "@material-ui/core/InputLabel";
 
 const useStyles = makeStyles(theme => ({
     formControl: {
@@ -83,17 +86,21 @@ function App() {
     const [websites, setWebsites] = useState([]);
     const [showConfig, setShowConfig] = useState(false);
     const [configMessage, setConfigMessage] = useState(null);
+    const [availableContexts, setAvailableContexts] = useState([]);
+    const [currentContext, setCurrentContext] = useState(null);
+    const prevContext = usePrevious(currentContext);
 
     useEffect(() => {
         window.backend.Client.GetCurrentConfigPath().then(cp => {
             if (cp) {
                 setConfigFilePath(cp);
+                refreshContext();
             }
         });
 
     }, []);
 
-    useEffect(() => {
+    const refreshContext = () => {
         setWebsites([]);
         setLoading(true);
         window.backend.Client.ListNamespaces().then((r) => {
@@ -101,7 +108,13 @@ function App() {
             setSelectedNS(["default"]);
             setLoading(false)
         });
-    }, [configFilePath]);
+        Promise.all([window.backend.Client.GetAvailableContexts(), window.backend.Client.GetCurrentContext()]).then(([acs, cc]) => {
+            console.log("current context", cc, ", available:", acs);
+            setAvailableContexts(acs);
+            setCurrentContext(cc);
+        });
+
+    }
 
     useEffect(() => {
         if (selectedNamespaces !== null && prevSelectedNamespaces !== selectedNamespaces) {
@@ -127,9 +140,13 @@ function App() {
             if (nsToAdd) {
                 console.log("adding ns", nsToAdd)
                 window.backend.Client.GetWebsitesInNamespace(nsToAdd).then(results => {
+                    console.log("received websites in ns to add", results)
                     // when we already have all namespaces there is no need to concat the results of the given website
-                    if (!(prevSelectedNamespaces || []).includes("All Namespaces")) {
-                        newWebsites = newWebsites.concat(JSON.parse(results));
+                    if (results && !(prevSelectedNamespaces || []).includes("All Namespaces")) {
+                        const resObj = JSON.parse(results)
+                        if (resObj){
+                            newWebsites = newWebsites.concat(resObj);
+                        }
                     }
                     // if we just added All namespaces the portforwards will be reset so we sh
                     setWebsites(newWebsites);
@@ -204,7 +221,7 @@ function App() {
                                 <Typography>No config file found</Typography>
                             </Alert>
                         </Grid>) : null}
-                        {configFilePath && websites.length === 0 ? (<Grid item xs={12}>
+                        {(configFilePath && websites.length === 0) ? (<Grid item xs={12}>
                             <Alert icon={<MoodBadTwoTone/>} severity="info">
                                 <Typography>No websites found to port-forward in the selected namespace(s)</Typography>
                             </Alert>
@@ -270,6 +287,15 @@ function App() {
                                                 })
                                             }}>Browse</Button>
                                 </Grid>
+                                { (availableContexts && currentContext) ?
+                                <Grid item xs={8}>
+                                    <FormControl>
+                                        <InputLabel>Config context</InputLabel>
+                                        <Select value={currentContext} onChange={({target:{value}}) => setCurrentContext(value)}>
+                                            {availableContexts.map(c => <MenuItem value={c}>{c}</MenuItem>)}
+                                        </Select>
+                                    </FormControl>
+                                </Grid> : null}
                                 {configMessage ? (
                                     <Grid item xs={12}>
                                         <Alert severity={configMessage.severity} onClose={() => {
@@ -280,14 +306,17 @@ function App() {
                                     </Grid>) : null}
                                 <Grid item xs={12} style={{textAlign: "center"}}>
                                     <Button color="primary" variant="outlined" onClick={() => {
-                                        window.backend.Client.SetConfigPath(confPathEl.current.value).then((rv) => {
+                                        window.backend.Client.SetConfigPath(confPathEl.current.value, currentContext).then(([rv, ctx]) => {
                                             if (rv === confPathEl.current.value) {
                                                 setConfigFilePath(rv);
+                                                refreshContext();
                                                 setConfigMessage({
                                                     severity: "success",
-                                                    message: `Successfully changed config to path ${rv}`
+                                                    message: `Successfully set config to path ${rv} and context to ${ctx}`
                                                 })
                                             } else {
+                                                // reset context
+                                                setCurrentContext(ctx);
                                                 setConfigMessage({
                                                     severity: "error",
                                                     message: `Failed to change config to path ${confPathEl.current.value}`
