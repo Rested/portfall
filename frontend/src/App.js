@@ -74,9 +74,9 @@ function usePrevious(value) {
 function App() {
     const classes = useStyles();
     const [namespaces, setNamespaces] = useState([]);
-    const [selectedNS, setSelectedNS] = useState([]);
+    const [selectedNamespaces, setSelectedNS] = useState([]);
     const [anchorEl, setAnchorEl] = useState(null);
-    const prevSelectedNS = usePrevious(selectedNS);
+    const prevSelectedNamespaces = usePrevious(selectedNamespaces);
     const [configFilePath, setConfigFilePath] = useState(null)
     const confPathEl = useRef(null)
     const [loading, setLoading] = useState(true);
@@ -104,21 +104,21 @@ function App() {
     }, [configFilePath]);
 
     useEffect(() => {
-        if (selectedNS !== null && prevSelectedNS !== selectedNS) {
-            setLoading(true)
+        if (selectedNamespaces !== null && prevSelectedNamespaces !== selectedNamespaces) {
+            setLoading(true);
             // get ns to add
-            const nsToAdd = selectedNS.find(ns => !(prevSelectedNS || []).includes(ns));
-            const nsToRemove = (prevSelectedNS || []).find(ns => !selectedNS.includes(ns));
+            const nsToAdd = selectedNamespaces.find(ns => !(prevSelectedNamespaces || []).includes(ns));
+            const namespacesToRemove = (prevSelectedNamespaces || []).filter(ns => !selectedNamespaces.includes(ns));
             let newWebsites = websites;
-            if (nsToRemove) {
-                window.backend.Client.RemoveWebsitesInNamespace(nsToRemove).then(() => {
-                    console.log("removed namespace", nsToRemove)
+            if (namespacesToRemove) {
+                Promise.all(namespacesToRemove.map(ns => window.backend.Client.RemoveWebsitesInNamespace(ns))).then(() => {
+                    console.log("removed namespaces", namespacesToRemove)
                 });
                 newWebsites = websites.filter(w => {
-                    if (w.namespace === nsToRemove) {
+                    if (namespacesToRemove.includes(w.namespace)) {
                         return false
                     }
-                    if (nsToRemove === "All Namespaces" && !selectedNS.includes(w.namespace)) {
+                    if (namespacesToRemove.includes("All Namespaces") && !selectedNamespaces.includes(w.namespace)) {
                         return false
                     }
                     return true
@@ -127,9 +127,11 @@ function App() {
             if (nsToAdd) {
                 console.log("adding ns", nsToAdd)
                 window.backend.Client.GetWebsitesInNamespace(nsToAdd).then(results => {
-                    if (!(prevSelectedNS || []).includes("All Namespaces")) {
+                    // when we already have all namespaces there is no need to concat the results of the given website
+                    if (!(prevSelectedNamespaces || []).includes("All Namespaces")) {
                         newWebsites = newWebsites.concat(JSON.parse(results));
                     }
+                    // if we just added All namespaces the portforwards will be reset so we sh
                     setWebsites(newWebsites);
                     setLoading(false);
                 });
@@ -139,7 +141,7 @@ function App() {
             }
 
         }
-    }, [selectedNS, prevSelectedNS, websites]);
+    }, [selectedNamespaces, prevSelectedNamespaces, websites]);
 
 
     return (
@@ -153,11 +155,11 @@ function App() {
                 margin: "auto",
                 width: "60%",
                 opacity: 0.01
-            }}/>
+            }} alt="Blue Portfall logo in background"/>
             <div id="app" className="App">
                 <AppBar id="Controls">
                     <Toolbar>
-                        <img src="/whiteicon.png" style={{width: 40, marginRight: "1em"}}/>
+                        <img alt="White Portfall logo in toolbar" src="/whiteicon.png" style={{width: 40, marginRight: "1em"}}/>
                         <Typography className={classes.title} variant="h6" noWrap>
                             Portfall
                         </Typography>
@@ -165,7 +167,7 @@ function App() {
                         <FormControl className={classes.formControl}>
                             <Autocomplete options={["All Namespaces"].concat(namespaces)}
                                           multiple
-                                          value={selectedNS}
+                                          value={selectedNamespaces}
                                           classes={{
                                               inputRoot: classes.inputRoot,
                                               endAdornment: classes.endAdornment

@@ -260,7 +260,16 @@ func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) ([]*
 
 	var wg sync.WaitGroup
 	queue := make(chan *website, 1)
+	podLoop:
 	for _, pod := range pods.Items {
+		// skip pods in already active namespaces
+		if namespace == "All Namespaces"{
+			for _, n := range c.activeNamespaces {
+				if n != namespace && n == pod.Namespace {
+					continue podLoop
+				}
+			}
+		}
 		// services
 		handledPorts := c.handleServicesInPod(services, pod, &wg, queue)
 		// container ports
@@ -305,13 +314,8 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 			return ""
 		}
 		log.Printf("Got %d websites forwarded in ns %s", len(nsWebsites), namespace)
+		c.websites = append(c.websites, nsWebsites...)
 
-		if namespace == "All Namespaces" {
-			c.websites = nsWebsites
-		} else {
-			c.websites = append(c.websites, nsWebsites...)
-
-		}
 	} else {
 		log.Printf("skipping get websites for namespace %s as already in active namespaces %v", namespace, c.activeNamespaces)
 		for _, w := range c.websites {
