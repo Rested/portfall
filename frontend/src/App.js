@@ -21,6 +21,8 @@ import IconButton from "@material-ui/core/IconButton";
 import Select from "@material-ui/core/Select";
 import MenuItem from "@material-ui/core/MenuItem";
 import InputLabel from "@material-ui/core/InputLabel";
+import whiteIcon from './whiteicon.png';
+import blueIcon from './blueicon.png';
 
 const useStyles = makeStyles(theme => ({
     formControl: {
@@ -163,7 +165,7 @@ function App() {
 
     return (
         <ThemeProvider theme={theme}>
-            <img src="/blueicon.png" style={{
+            <img src={blueIcon} style={{
                 position: "absolute",
                 top: 0,
                 bottom: 0,
@@ -171,12 +173,12 @@ function App() {
                 right: 0,
                 margin: "auto",
                 width: "60%",
-                opacity: 0.01
+                opacity: 0.02
             }} alt="Blue Portfall logo in background"/>
             <div id="app" className="App">
                 <AppBar id="Controls">
                     <Toolbar>
-                        <img alt="White Portfall logo in toolbar" src="/whiteicon.png" style={{width: 40, marginRight: "1em"}}/>
+                        <img alt="White Portfall logo in toolbar" src={whiteIcon} style={{width: 40, height: 40, marginRight: "1em"}}/>
                         <Typography className={classes.title} variant="h6" noWrap>
                             Portfall
                         </Typography>
