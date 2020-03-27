@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"testing"
 )
 
@@ -45,6 +46,90 @@ func TestTagMetaIcons(t *testing.T) {
 		t.Error(err)
 	}
 	if len(tmIcons) != 1 {
+		t.Errorf("Got %d icons, expected 1", len(tmIcons))
+	}else{
+		icon := tmIcons[0]
+		if icon.size == 0 {
+			t.Errorf("expected non-zero file iconsize")
+		}
+		if path.Dir(icon.FilePath) != os.TempDir() {
+			t.Errorf("expected output to live in os tempdir %s got %s", os.TempDir(), path.Dir(icon.FilePath))
+		}
+		if icon.width != 0 || icon.height != 0 {
+			t.Errorf("expected 0,0 height,width. Got %d,%d", icon.width, icon.height)
+		}
+	}
+
+
+}
+
+
+func TestTagMetaIconsWithNoFavicon(t *testing.T) {
+	raw := `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script>
+      
+      !(function() {
+        if ('PerformanceLongTaskTiming' in window) {
+          var g = (window.__tti = { e: [] });
+          g.o = new PerformanceObserver(function(l) {
+            g.e = g.e.concat(l.getEntries());
+          });
+          g.o.observe({ entryTypes: ['longtask'] });
+        }
+      })();
+
+    </script>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#000" />
+
+    <title>Grafana</title>
+
+    <base href="/" />
+
+    <link
+      rel="preload"
+      href="public/fonts/roboto/RxZJdnzeo3R5zSexge8UUVtXRa8TVwTICgirnJhmVJw.woff2"
+      as="font"
+      crossorigin
+    />
+
+    <link rel="icon" type="image/png" href="public/img/fav32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="public/img/apple-touch-icon.png" />
+    <link rel="mask-icon" href="public/img/grafana_mask_icon.svg" color="#F05A28" />
+
+    <link rel="stylesheet" href="public/build/grafana.dark.71af4420a0fca6a7ffc6.css" />
+
+    <script>
+      performance.mark('css done blocking');
+    </script>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="msapplication-TileColor" content="#2b5797" />
+    <meta name="msapplication-config" content="public/img/browserconfig.xml" />
+  </head>
+
+  <body class="theme-dark app-grafana">
+  </body>
+</html>
+`
+	reader := strings.NewReader(raw)
+	doc, err := goquery.NewDocumentFromReader(reader)
+	if err != nil {
+		t.Error(err)
+	}
+	tmIcons, err := tagMetaIcons(*doc, url.URL{
+		Scheme: "https",
+		Host: "play.grafana.org",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(tmIcons) != 2 {
 		t.Errorf("Got %d icons, expected 1", len(tmIcons))
 	}
 

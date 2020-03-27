@@ -33,7 +33,7 @@ type Icon struct {
 }
 
 var linkRels = [4]string{"icon", "shortcut icon", "apple-touch-icon", "apple-touch-icon-precomposed"}
-var metaNames = [2]string{"msapplication-TileImage", "og:image"}
+var metaNames = [3]string{"msapplication-TileImage", "og:image", "image"}
 
 // GetBest takes a url and gets the best Icon for it (where best is defined as largest file size)
 func GetBest(getUrl string) (*Icon, error) {
@@ -117,7 +117,10 @@ func getTagsToFetch(doc goquery.Document) []*goquery.Selection {
 		if !exists {
 			metaType, exists = s.Attr("property")
 			if !exists {
-				return
+				metaType, exists = s.Attr("itemprop")
+				if !exists {
+					return
+				}
 			}
 		}
 		metaType = strings.ToLower(metaType)
@@ -184,7 +187,7 @@ func dimensions(t *goquery.Selection, linkUrl *string) (int, int) {
 	if exists && sizes != "any" {
 		size := strings.Split(sizes, " ")
 		sort.Sort(sort.Reverse(sort.StringSlice(size)))
-		re := regexp.MustCompile("[x\xd7]")
+		re := regexp.MustCompile(`(?m)[x\xd7]`)
 		unpack(re.Split(size[0], 2), &width, &height)
 	} else {
 		sizeRE := regexp.MustCompile("(?mi)(?P<width>[[:digit:]]{2,4})x(?P<height>[[:digit:]]{2,4})")
@@ -274,6 +277,10 @@ func getIconFromUrl(iconUrl *url.URL) (*Icon, error) {
 	if extensions != nil {
 		extension = extensions[0]
 	}
+	if !strings.HasPrefix(mimeType, "image") {
+		return nil, fmt.Errorf("bad mimeType %s on remote icon", mimeType)
+	}
+
 	fp, size := responseToFile(*resp, extension)
 	return &Icon{
 		width:     0,

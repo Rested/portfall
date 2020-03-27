@@ -291,7 +291,7 @@ function App() {
                                 </Grid>
                                 { (availableContexts && currentContext) ?
                                 <Grid item xs={8}>
-                                    <FormControl>
+                                    <FormControl fullWidth>
                                         <InputLabel>Config context</InputLabel>
                                         <Select value={currentContext} onChange={({target:{value}}) => setCurrentContext(value)}>
                                             {availableContexts.map(c => <MenuItem value={c}>{c}</MenuItem>)}
