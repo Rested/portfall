@@ -63,6 +63,7 @@ type Website struct {
 	IconUrl       string `json:"iconUrl"`
 	IconRemoteUrl string `json:"iconRemoteUrl"`
 	Namespace     string `json:"namespace"`
+	PodName       string `json:"podName"`
 }
 
 // PortForwardAPdd takes a portForwardPodRequest and creates the port forward to the given pod
@@ -213,11 +214,19 @@ func (c *Client) handleServicesInPod(services *v1.ServiceList, pod v1.Pod, wg *s
 			}
 		}
 		if matchCount == len(svc.Spec.Selector) {
-			for _, port := range svc.Spec.Ports {
-				handledPorts = append(handledPorts, port.TargetPort.IntVal)
-				wg.Add(1)
-				go c.handleWebsiteAdding(pod, port.TargetPort.IntVal, svc.Name, "service", queue)
-			}
+			portIter:
+				for _, port := range svc.Spec.Ports {
+					for _, p := range handledPorts {
+						if p == port.TargetPort.IntVal {
+							// this port has already been handled by another service so we are safe to skip it
+							log.Printf("skipped port %d for service %s as it has already been handled", p, svc.Name)
+							continue portIter
+						}
+					}
+					handledPorts = append(handledPorts, port.TargetPort.IntVal)
+					wg.Add(1)
+					go c.handleWebsiteAdding(pod, port.TargetPort.IntVal, svc.Name, "service", queue)
+				}
 		}
 	}
 	return handledPorts
@@ -255,6 +264,7 @@ func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) ([]*
 		return nil, err
 	}
 
+	var handledReplicationControllers []string
 	var wg sync.WaitGroup
 	queue := make(chan *Website, 1)
 podLoop:
@@ -265,6 +275,25 @@ podLoop:
 				if n != namespace && n == pod.Namespace {
 					continue podLoop
 				}
+			}
+		}
+		// skip not running pods
+		if pod.Status.Phase != "Running" {
+			continue podLoop
+		}
+		// has been scheduled from deletion
+		if pod.DeletionTimestamp != nil {
+			continue podLoop
+		}
+		// handle replication controllers we only need one pod from each replica
+		for _, owner := range pod.OwnerReferences {
+			if owner.Kind == "StatefulSet" || owner.Kind == "ReplicaSet" || owner.Kind == "DaemonSet" {
+				for _, rc := range handledReplicationControllers {
+					if rc == owner.Name {
+						continue podLoop
+					}
+				}
+				handledReplicationControllers = append(handledReplicationControllers, owner.Name)
 			}
 		}
 		// services
@@ -297,7 +326,7 @@ func (c *Client) addDerivedDetailsToWebsites() {
 			}
 			website.IconUrl = fmt.Sprintf("file://%s", website.icon.FilePath)
 			website.IconRemoteUrl = website.icon.RemoteUrl
-
+			website.PodName = website.portForwardReq.Pod.Name
 			website.Namespace = website.portForwardReq.Pod.Namespace
 		}
 	}
@@ -447,12 +476,13 @@ func (c *Client) SetConfigPath(configPath string, context string) []string {
 	return []string{configPath, useContext}
 }
 
-func (c *Client) closeAllPortForwards(){
+func (c *Client) closeAllPortForwards() {
 	for _, w := range c.websites {
 		log.Printf("closing port forward on port %d of pod %s", w.PodPort, w.portForwardReq.Pod.Name)
 		close(w.portForwardReq.StopCh)
 	}
 }
+
 // todo: search for all config files and present them in ui - autodetect
 
 func homeDir() string {
