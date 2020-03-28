@@ -15,8 +15,9 @@
 </p>
 
 ## Demo
-
-![Demo gif](demo.gif)
+<p align="center">
+<img src="demo.gif" alt="Demo gif"/>
+</p>
 
 ## Installation
 
