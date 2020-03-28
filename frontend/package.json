@@ -1,7 +1,7 @@
 {
   "name": "portfall",
   "author": "Reuben Thomas-Davis<reuben@rekon.uk>",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "dependencies": {
     "@material-ui/core": "^4.9.7",
