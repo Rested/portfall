@@ -14,6 +14,9 @@
   <img src="https://img.shields.io/badge/Windows-Supported-Green.svg?style=flat"/>
 </p>
 
+## Demo
+
+![Demo gif](demo.gif)
 
 ## Installation
 
