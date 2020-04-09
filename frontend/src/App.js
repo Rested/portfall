@@ -97,7 +97,14 @@ function App() {
             if (cp) {
                 setConfigFilePath(cp);
                 refreshContext();
+            }else{
+                Promise.all([window.backend.Client.GetAvailableContexts(), window.backend.Client.GetCurrentContext()]).then(([acs, cc]) => {
+                    console.log("current context", cc, ", available:", acs);
+                    setAvailableContexts(acs);
+                    setCurrentContext(cc);
+                });
             }
+
         });
 
     }, []);
