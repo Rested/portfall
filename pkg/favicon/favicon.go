@@ -192,7 +192,7 @@ func dimensions(t *goquery.Selection, linkUrl *string) (int, int) {
 	} else {
 		sizeRE := regexp.MustCompile("(?mi)(?P<width>[[:digit:]]{2,4})x(?P<height>[[:digit:]]{2,4})")
 		matches := sizeRE.FindStringSubmatch(*linkUrl)
-		if matches != nil {
+		if matches != nil && len(matches) == 2 {
 			unpack(matches, &width, &height)
 		} else {
 			width, height = "0", "0"

@@ -351,7 +351,6 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 	if !skip {
 		nsWebsites, err = c.forwardAndGetIconsForWebsitesInNamespace(namespace)
 		if err != nil {
-			log.Print(err)
 			return ""
 		}
 		log.Printf("Got %d websites forwarded in ns %s", len(nsWebsites), namespace)
@@ -501,6 +500,8 @@ func (c *Client) WailsInit(_ *wails.Runtime) error {
 	}
 	namespaces, err := s.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil || len(namespaces.Items) == 0 {
+		c.rawConf = rawConf
+		c.currentContext = c.rawConf.CurrentContext
 		log.Printf("no namespaces in cluster with config path %s - could be a connection issue", confPath)
 		return nil
 	}
