@@ -42,6 +42,8 @@ Portfall uses **Go** to do all the Kubernetes work and **React** + **Material UI
 This is glued together as a single binary with native rendering by the fantastic 
 [Wails](https://github.com/wailsapp/wails) framework.
 
+You can read more about it in my blog post here: 
+https://rekon.uk/2020/04/portfall-a-desktop-k8s-port-forwarding-portal-for-easy-access-to-all-your-cluster-uis/
 
 ## License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Frekon-oss%2Fportfall.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Frekon-oss%2Fportfall?ref=badge_large)
