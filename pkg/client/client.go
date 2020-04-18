@@ -388,15 +388,15 @@ func getDefaultClientSetAndConfig() (*kubernetes.Clientset, *rest.Config, *api.C
 			&clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules())
 		restConf, err := clientConf.ClientConfig()
 		if err != nil {
-			return &kubernetes.Clientset{}, &rest.Config{}, &api.Config{}, "", err
+			return &kubernetes.Clientset{}, &rest.Config{}, &api.Config{}, configPath, err
 		}
 		clientSet, err := kubernetes.NewForConfig(restConf)
 		if err != nil {
-			return &kubernetes.Clientset{}, &rest.Config{}, &api.Config{}, "", err
+			return &kubernetes.Clientset{}, &rest.Config{}, &api.Config{}, configPath, err
 		}
 		return clientSet, restConf, rawConfig, configPath, nil
 	}
-	return &kubernetes.Clientset{}, &rest.Config{}, &api.Config{}, "", errors.New("default config not found")
+	return &kubernetes.Clientset{}, &rest.Config{}, &api.Config{}, configPath, errors.New("default config not found")
 }
 
 // GetCurrentConfigPath simply returns the configPath
@@ -460,11 +460,6 @@ func (c *Client) SetConfigPath(configPath string, context string) []string {
 		return []string{c.configPath, c.currentContext}
 	}
 
-	namespaces, err := clientSet.CoreV1().Namespaces().List(metav1.ListOptions{})
-	if err != nil || len(namespaces.Items) == 0 {
-		log.Printf("no namespaces in cluster with restConf path %s - could be a connection issue", configPath)
-		return []string{c.configPath, c.currentContext}
-	}
 	// close forwards in the old context
 	c.closeAllPortForwards()
 	c.rawConf = rawConfig
@@ -502,6 +497,9 @@ func (c *Client) WailsInit(_ *wails.Runtime) error {
 	if err != nil || len(namespaces.Items) == 0 {
 		c.rawConf = rawConf
 		c.currentContext = c.rawConf.CurrentContext
+		c.configPath = confPath
+		c.s = s
+		c.conf = conf
 		log.Printf("no namespaces in cluster with config path %s - could be a connection issue", confPath)
 		return nil
 	}

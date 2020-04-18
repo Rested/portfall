@@ -230,9 +230,14 @@ function App() {
                                 <Typography>No config file found</Typography>
                             </Alert>
                         </Grid>) : null}
-                        {(configFilePath && websites.length === 0) ? (<Grid item xs={12}>
+                        {(configFilePath && websites.length === 0 && namespaces.length) ? (<Grid item xs={12}>
                             <Alert icon={<MoodBadTwoTone/>} severity="info">
                                 <Typography>No websites found to port-forward in the selected namespace(s)</Typography>
+                            </Alert>
+                        </Grid>) : null}
+                        {(configFilePath && !namespaces.length) ? (<Grid item xs={12}>
+                            <Alert icon={<MoodBadTwoTone/>} severity="warning">
+                                <Typography>Invalid context, try updating your config or switching context</Typography>
                             </Alert>
                         </Grid>) : null}
                         {websites.map(({localPort, podPort, title, iconRemoteUrl}) => (
