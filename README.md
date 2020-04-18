@@ -1,7 +1,7 @@
 # Portfall
 
 <p align="center">
-  A tiny k8s port-forwarding portal for easy access to all your cluster UIs
+  A desktop k8s port-forwarding portal for easy access to all your cluster UIs
   <br/><br/>
   <a href="https://goreportcard.com/report/github.com/rekon-oss/portfall"><img src="https://goreportcard.com/badge/github.com/rekon-oss/portfall"/></a>
   <a href="https://www.codefactor.io/repository/github/rekon-oss/portfall"><img src="https://www.codefactor.io/repository/github/rekon-oss/portfall/badge" alt="CodeFactor" /></a>
