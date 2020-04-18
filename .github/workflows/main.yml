@@ -41,7 +41,8 @@ jobs:
         wails build
         # turn into app image
         wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-        linuxdeploy*.AppImage --appdir AppDir --executable Portfall --desktop-file=Portfall.AppImage.desktop --icon-file=appicon.png --output appimage
+        chmod +x linuxdeploy*.AppImage
+        ./linuxdeploy*.AppImage --appdir AppDir --executable Portfall --desktop-file=Portfall.AppImage.desktop --icon-file=appicon.png --output appimage
       if: matrix.platform == 'ubuntu-latest'
     - name: Build package windows
       run: |
