@@ -11,3 +11,5 @@ Portfall-res.syso
 portfall.app
 Portfall.app
 *.snap
+AppDir
+Portfall*.AppImage

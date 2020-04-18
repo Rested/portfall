@@ -39,6 +39,9 @@ jobs:
         mkdir -p ~/.wails
         cp wails.json ~/.wails/
         wails build
+        # turn into app image
+        wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+        linuxdeploy*.AppImage --appdir AppDir --executable Portfall --desktop-file=Portfall.AppImage.desktop --icon-file=appicon.png --output appimage
       if: matrix.platform == 'ubuntu-latest'
     - name: Build package windows
       run: |
@@ -60,7 +63,7 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: portfall-linux
-        path: Portfall
+        path: Portfall*.AppImage
       if: matrix.platform == 'ubuntu-latest'
     - name: upload artifact windows
       uses: actions/upload-artifact@v1
@@ -108,8 +111,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-        asset_path: ./portfall-linux/Portfall
-        asset_name: Portfall
+        asset_path: ./portfall-linux/Portfall*.AppImage
+        asset_name: Portfall-x86_64.AppImage
         asset_content_type: application/octet-stream
     - name: Download windows package
       uses: actions/download-artifact@v1
