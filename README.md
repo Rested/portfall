@@ -23,7 +23,14 @@
 
 ### [MacOS](https://github.com/rekon-oss/portfall/releases/latest/download/Portfall.dmg), [Windows](https://github.com/rekon-oss/portfall/releases/latest/download/Portfall.exe)
 ### Linux
-#### [Binary](https://github.com/rekon-oss/portfall/releases/latest/download/Portfall)
+#### Use the [AppImage](https://github.com/rekon-oss/portfall/releases/latest/download/Portfall)
+Recommend installing [appimaged](https://github.com/AppImage/appimaged) to integrate portfall properly with your system.
+```bash
+wget "https://github.com/AppImage/appimaged/releases/download/continuous/appimaged-x86_64.AppImage"
+chmod a+x appimaged-x86_64.AppImage
+./appimaged-x86_64.AppImage --install
+```
+
 #### Build from source
 ```bash
 git clone https://github.com/rekon-oss/portfall
@@ -34,7 +41,7 @@ go get -u github.com/wailsapp/wails/cmd/wails
 wails build
 ```
 #### Snap coming soon!
-
+Classic confinement requested [here](https://forum.snapcraft.io/t/classic-confinement-request-for-portfall/16520) 
 
 ## Technical details
 
