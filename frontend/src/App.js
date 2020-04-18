@@ -90,7 +90,7 @@ function App() {
     const [configMessage, setConfigMessage] = useState(null);
     const [availableContexts, setAvailableContexts] = useState([]);
     const [currentContext, setCurrentContext] = useState(null);
-    const prevContext = usePrevious(currentContext);
+    // const prevContext = usePrevious(currentContext);
 
     useEffect(() => {
         window.backend.Client.GetCurrentConfigPath().then(cp => {
