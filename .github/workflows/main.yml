@@ -61,7 +61,7 @@ jobs:
         path: Portfall.dmg
       if: matrix.platform == 'macos-latest'
     - name: upload artifact linux
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2-preview
       with:
         name: portfall-linux
         path: Portfall*.AppImage
