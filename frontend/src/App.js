@@ -7,7 +7,7 @@ import Typography from "@material-ui/core/Typography";
 import Autocomplete from '@material-ui/lab/Autocomplete';
 import TextField from "@material-ui/core/TextField";
 import Grid from "@material-ui/core/Grid";
-import {BugReport, Close, Folder, Launch, MoodBadTwoTone, Settings} from "@material-ui/icons";
+import {BugReport, Close, Folder, Launch, MoodBadTwoTone, Settings, GitHub} from "@material-ui/icons";
 import Alert from "@material-ui/lab/Alert";
 import {Card, CircularProgress} from "@material-ui/core";
 import Avatar from "@material-ui/core/Avatar";

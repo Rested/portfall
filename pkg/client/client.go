@@ -14,12 +14,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"portfall/pkg/favicon"
+	"portfall/pkg/logger"
 	"strings"
 	"sync"
 	"time"
@@ -34,6 +34,7 @@ type Client struct {
 	currentContext   string
 	websites         []*Website
 	activeNamespaces []string
+	log              *logger.CustomLogger
 }
 
 // Handles ongoing port-forwards for websites
@@ -119,17 +120,17 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 	go func() {
 		err := portForwardAPod(portForwardReq)
 		if err != nil {
-			log.Print(err)
+			c.log.Debugf("%v", err)
 		}
 	}()
 
 	select {
 	case <-readyCh:
 		break
-	case <-time.After(4 * time.Second):
+	case <-time.After(10 * time.Second):
 		close(stopCh)
 		//close(readyCh)
-		return nil, fmt.Errorf("timed out of portforward for pod %s on port %d after 4 seconds", pod.Name, portForwardReq.PodPort)
+		return nil, fmt.Errorf("timed out of portforward for pod %s on port %d after 10 seconds", pod.Name, portForwardReq.PodPort)
 	}
 	website := Website{
 		isForwarded:    true,
@@ -152,13 +153,14 @@ func (c *Client) getWebsiteForPort(pod v1.Pod, containerPort int32) (*Website, e
 func (c *Client) ListNamespaces() (nsList []string) {
 	namespaces, err := c.s.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
-		log.Printf("Found no namespaces")
-		log.Print(err)
+		c.log.Warnf("Found no namespaces")
+		c.log.Debugf("%v", err)
 		return make([]string, 0)
 	}
 	for _, ns := range namespaces.Items {
 		nsList = append(nsList, ns.Name)
 	}
+	c.log.Infof("Found the following namespaces %v", nsList)
 	return nsList
 }
 
@@ -197,8 +199,8 @@ websiteLoop:
 func (c *Client) handleWebsiteAdding(p v1.Pod, tp int32, resourceName string, resourceType string, queue chan *Website) {
 	ws, err := c.getWebsiteForPort(p, tp)
 	if err != nil {
-		log.Printf("Failed to get icons for pod %s in %s %s on port %d", p.Name, resourceName, resourceType, tp)
-		log.Print(err)
+		c.log.Warnf("Failed to get icons for pod %s in %s %s on port %d", p.Name, resourceName, resourceType, tp)
+		c.log.Errorf("%v", err)
 		queue <- &Website{}
 	} else {
 		queue <- ws
@@ -214,19 +216,20 @@ func (c *Client) handleServicesInPod(services *v1.ServiceList, pod v1.Pod, wg *s
 			}
 		}
 		if matchCount == len(svc.Spec.Selector) {
-			portIter:
-				for _, port := range svc.Spec.Ports {
-					for _, p := range handledPorts {
-						if p == port.TargetPort.IntVal {
-							// this port has already been handled by another service so we are safe to skip it
-							log.Printf("skipped port %d for service %s as it has already been handled", p, svc.Name)
-							continue portIter
-						}
+		portIter:
+			for _, port := range svc.Spec.Ports {
+				for _, p := range handledPorts {
+					if p == port.TargetPort.IntVal {
+						// this port has already been handled by another service so we are safe to skip it
+						c.log.Infof("skipped port %d for service %s as it has already been handled", p, svc.Name)
+						
+						continue portIter
 					}
-					handledPorts = append(handledPorts, port.TargetPort.IntVal)
-					wg.Add(1)
-					go c.handleWebsiteAdding(pod, port.TargetPort.IntVal, svc.Name, "service", queue)
 				}
+				handledPorts = append(handledPorts, port.TargetPort.IntVal)
+				wg.Add(1)
+				go c.handleWebsiteAdding(pod, port.TargetPort.IntVal, svc.Name, "service", queue)
+			}
 		}
 	}
 	return handledPorts
@@ -255,12 +258,12 @@ func (c *Client) forwardAndGetIconsForWebsitesInNamespace(namespace string) ([]*
 	}
 	pods, err := c.s.CoreV1().Pods(internalNS).List(metav1.ListOptions{})
 	if err != nil {
-		log.Printf("Failed to get pods in ns %s", namespace)
+		c.log.Warnf("Failed to get pods in ns %s", namespace)
 		return nil, err
 	}
 	services, err := c.s.CoreV1().Services(internalNS).List(metav1.ListOptions{})
 	if err != nil {
-		log.Printf("Failed to get services in ns %s", namespace)
+		c.log.Warnf("Failed to get services in ns %s", namespace)
 		return nil, err
 	}
 
@@ -303,7 +306,7 @@ podLoop:
 	}
 	go func() {
 		for w := range queue {
-			log.Printf("received website forwarded (%t) to port %d from chan!", w.isForwarded, w.LocalPort)
+			c.log.Infof("received website forwarded (%t) to port %d from chan!", w.isForwarded, w.LocalPort)
 			if w.isForwarded {
 				nsWebsites = append(nsWebsites, w)
 			}
@@ -311,9 +314,9 @@ podLoop:
 		}
 	}()
 
-	log.Printf("waiting for all potential websites to be processed")
+	c.log.Infof("waiting for all potential websites to be processed")
 	wg.Wait()
-	log.Printf("%d websites processed", len(nsWebsites))
+	c.log.Infof("%d websites processed", len(nsWebsites))
 	return nsWebsites, nil
 }
 
@@ -353,11 +356,11 @@ func (c *Client) GetWebsitesInNamespace(namespace string) string {
 		if err != nil {
 			return ""
 		}
-		log.Printf("Got %d websites forwarded in ns %s", len(nsWebsites), namespace)
+		c.log.Infof("Got %d websites forwarded in ns %s", len(nsWebsites), namespace)
 		c.websites = append(c.websites, nsWebsites...)
 		c.addDerivedDetailsToWebsites()
 	} else {
-		log.Printf("skipping get websites for namespace %s as already in active namespaces %v", namespace, c.activeNamespaces)
+		c.log.Infof("skipping get websites for namespace %s as already in active namespaces %v", namespace, c.activeNamespaces)
 		for _, w := range c.websites {
 			if w.portForwardReq.Pod.Namespace == namespace {
 				nsWebsites = append(nsWebsites, w)
@@ -429,7 +432,7 @@ func (c *Client) SetConfigPath(configPath string, context string) []string {
 	if configPath != c.configPath {
 		rawConfig, err = clientcmd.LoadFromFile(configPath)
 		if err != nil {
-			log.Print(err)
+			c.log.Debugf("%v", err)
 			return []string{c.configPath, c.currentContext}
 		}
 		for k := range rawConfig.Contexts {
@@ -450,13 +453,13 @@ func (c *Client) SetConfigPath(configPath string, context string) []string {
 	restConf, err := clientConf.ClientConfig()
 
 	if err != nil {
-		log.Printf("error building restConf from path %s", configPath)
-		log.Print(err)
+		c.log.Infof("error building restConf from path %s", configPath)
+		c.log.Debugf("%v", err)
 		return []string{c.configPath, c.currentContext}
 	}
 	clientSet, err := kubernetes.NewForConfig(restConf)
 	if err != nil {
-		log.Printf("error building clientset from restConf at %s", configPath)
+		c.log.Infof("error building clientset from restConf at %s", configPath)
 		return []string{c.configPath, c.currentContext}
 	}
 
@@ -472,7 +475,7 @@ func (c *Client) SetConfigPath(configPath string, context string) []string {
 
 func (c *Client) closeAllPortForwards() {
 	for _, w := range c.websites {
-		log.Printf("closing port forward on port %d of pod %s", w.PodPort, w.portForwardReq.Pod.Name)
+		c.log.Infof("closing port forward on port %d of pod %s", w.PodPort, w.portForwardReq.Pod.Name)
 		close(w.portForwardReq.StopCh)
 	}
 }
@@ -487,10 +490,11 @@ func homeDir() string {
 }
 
 // WailsInit takes the wails runtime and does some initialization - sets up the default client if possible
-func (c *Client) WailsInit(_ *wails.Runtime) error {
+func (c *Client) WailsInit(runtime *wails.Runtime) error {
+	c.log = logger.NewCustomLogger("Client", runtime)
 	s, conf, rawConf, confPath, err := getDefaultClientSetAndConfig()
 	if err != nil {
-		log.Printf("failed to get default config: %v", err.Error())
+		c.log.Warnf("failed to get default config: %v", err.Error())
 		return nil
 	}
 	namespaces, err := s.CoreV1().Namespaces().List(metav1.ListOptions{})
@@ -500,7 +504,7 @@ func (c *Client) WailsInit(_ *wails.Runtime) error {
 		c.configPath = confPath
 		c.s = s
 		c.conf = conf
-		log.Printf("no namespaces in cluster with config path %s - could be a connection issue", confPath)
+		c.log.Infof("no namespaces in cluster with config path %s - could be a connection issue", confPath)
 		return nil
 	}
 	c.rawConf = rawConf
@@ -508,6 +512,7 @@ func (c *Client) WailsInit(_ *wails.Runtime) error {
 	c.s = s
 	c.conf = conf
 	c.configPath = confPath
+
 	return nil
 }
 
