@@ -7,7 +7,7 @@ import Typography from "@material-ui/core/Typography";
 import Autocomplete from '@material-ui/lab/Autocomplete';
 import TextField from "@material-ui/core/TextField";
 import Grid from "@material-ui/core/Grid";
-import {Close, Folder, Launch, MoodBadTwoTone, Settings} from "@material-ui/icons";
+import {BugReport, Close, Folder, Launch, MoodBadTwoTone, Settings} from "@material-ui/icons";
 import Alert from "@material-ui/lab/Alert";
 import {Card, CircularProgress} from "@material-ui/core";
 import Avatar from "@material-ui/core/Avatar";
@@ -23,6 +23,7 @@ import MenuItem from "@material-ui/core/MenuItem";
 import InputLabel from "@material-ui/core/InputLabel";
 import whiteIcon from './whiteicon.png';
 import blueIcon from './blueicon.png';
+import Console from "./components/Console";
 
 const useStyles = makeStyles(theme => ({
     formControl: {
@@ -96,14 +97,17 @@ function App() {
     const [availableContexts, setAvailableContexts] = useState([]);
     const [currentContext, setCurrentContext] = useState(null);
     const [version, setVersion] = useState(null);
+    const [showConsole, setShowConsole] = useState(false);
     // const prevContext = usePrevious(currentContext);
 
+
+    console.log()
     useEffect(() => {
         window.backend.Client.GetCurrentConfigPath().then(cp => {
             if (cp) {
                 setConfigFilePath(cp);
                 refreshContext();
-            }else{
+            } else {
                 Promise.all([window.backend.Client.GetAvailableContexts(), window.backend.Client.GetCurrentContext()]).then(([acs, cc]) => {
                     console.log("current context", cc, ", available:", acs);
                     setAvailableContexts(acs);
@@ -115,6 +119,7 @@ function App() {
         window.backend.PortfallOS.GetVersion().then(v => {
             setVersion(v);
         })
+
 
     }, []);
 
@@ -162,7 +167,7 @@ function App() {
                     // when we already have all namespaces there is no need to concat the results of the given website
                     if (results && !(prevSelectedNamespaces || []).includes("All Namespaces")) {
                         const resObj = JSON.parse(results)
-                        if (resObj){
+                        if (resObj) {
                             newWebsites = newWebsites.concat(resObj);
                         }
                     }
@@ -194,7 +199,8 @@ function App() {
             <div id="app" className="App">
                 <AppBar id="Controls">
                     <Toolbar>
-                        <img alt="White Portfall logo in toolbar" src={whiteIcon} style={{width: 40, height: 40, marginRight: "1em"}}/>
+                        <img alt="White Portfall logo in toolbar" src={whiteIcon}
+                             style={{width: 40, height: 40, marginRight: "1em"}}/>
                         <Typography className={classes.title} variant="h6" noWrap>
                             Portfall {version ? <small>{version}</small> : null}
                         </Typography>
@@ -268,15 +274,47 @@ function App() {
                         {loading ? <Grid item xs={12} style={{textAlign: 'center'}}><CircularProgress/></Grid> : null}
                     </Grid>
                 </div>
+                <IconButton variant="contained" color="primary" style={{position: 'fixed', bottom: 10, right: 50}}
+                            size="medium"
+                            onClick={(e) => {
+                                setShowConsole(!showConsole);
+                                setAnchorEl(e.currentTarget);
+                                setShowConfig(false);
+                            }}
+                >
+                    <BugReport/>
+                </IconButton>
                 <IconButton variant="contained" color="primary" style={{position: 'fixed', bottom: 10, right: 10}}
                             size="medium"
                             onClick={(e) => {
                                 setAnchorEl(e.currentTarget);
                                 setShowConfig(!showConfig)
+                                setShowConsole(false);
                             }}
                 >
                     <Settings/>
                 </IconButton>
+                <Popper open={true} anchorEl={anchorEl} placement="top-end"
+                        onClose={() => setShowConsole(false)} disablePortal={false}
+                        modifiers={{
+                            flip: {
+                                enabled: true,
+                            },
+                            arrow: {
+                                enabled: false,
+                                // element: arrowRef,
+                            },
+                        }}>
+
+                    <Card
+                        style={showConsole ? {width: "90vw", height: "40vh", overflow: "scroll"} : {display: "none"}}>
+                        <CardHeader title="Portfall Console" action={<IconButton style={{verticalAlign: 'middle'}}
+                                                                                onClick={() => setShowConsole(false)}><Close/></IconButton>}/>
+                        <CardContent>
+                            <Console/>
+                        </CardContent>
+                    </Card>
+                </Popper>
 
 
                 <Popper open={showConfig} anchorEl={anchorEl} placement="top-end"
@@ -310,15 +348,16 @@ function App() {
                                                 })
                                             }}>Browse</Button>
                                 </Grid>
-                                { (availableContexts && currentContext) ?
-                                <Grid item xs={8}>
-                                    <FormControl fullWidth>
-                                        <InputLabel>Config context</InputLabel>
-                                        <Select value={currentContext} onChange={({target:{value}}) => setCurrentContext(value)}>
-                                            {availableContexts.map(c => <MenuItem value={c}>{c}</MenuItem>)}
-                                        </Select>
-                                    </FormControl>
-                                </Grid> : null}
+                                {(availableContexts && currentContext) ?
+                                    <Grid item xs={8}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Config context</InputLabel>
+                                            <Select value={currentContext}
+                                                    onChange={({target: {value}}) => setCurrentContext(value)}>
+                                                {availableContexts.map(c => <MenuItem value={c}>{c}</MenuItem>)}
+                                            </Select>
+                                        </FormControl>
+                                    </Grid> : null}
                                 {configMessage ? (
                                     <Grid item xs={12}>
                                         <Alert severity={configMessage.severity} onClose={() => {
