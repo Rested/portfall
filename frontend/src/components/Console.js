@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import * as Wails from "@wailsapp/runtime";
-import IconButton from "@material-ui/core/IconButton";
 import {GitHub} from "@material-ui/icons";
 import Button from "@material-ui/core/Button";
 
