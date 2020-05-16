@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/browser"
 	"github.com/wailsapp/wails"
 	"log"
+	"runtime/debug"
 )
 
 // PortfallOS manages os related functionality such as opening files or browsers
@@ -23,6 +24,14 @@ func (p *PortfallOS) OpenInBrowser(openUrl string) {
 	if err != nil {
 		log.Print(err)
 	}
+}
+
+func (p *PortfallOS) GetVersion() string {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		log.Print("Could not get build info")
+	}
+	return bi.Main.Version
 }
 
 // WailsInit assigns the runtime to the PortfallOS struct

@@ -34,7 +34,12 @@ const useStyles = makeStyles(theme => ({
         marginTop: theme.spacing(2),
     },
     title: {
-        flexGrow: 1
+        flexGrow: 1,
+        "& small": {
+            fontSize: 12,
+            opacity: 0.7,
+            verticalAlign: "text-top"
+        }
     },
     cardHeaderTitle: {
         minWidth: 10
@@ -90,6 +95,7 @@ function App() {
     const [configMessage, setConfigMessage] = useState(null);
     const [availableContexts, setAvailableContexts] = useState([]);
     const [currentContext, setCurrentContext] = useState(null);
+    const [version, setVersion] = useState(null);
     // const prevContext = usePrevious(currentContext);
 
     useEffect(() => {
@@ -106,6 +112,9 @@ function App() {
             }
 
         });
+        window.backend.PortfallOS.GetVersion().then(v => {
+            setVersion(v);
+        })
 
     }, []);
 
@@ -187,7 +196,7 @@ function App() {
                     <Toolbar>
                         <img alt="White Portfall logo in toolbar" src={whiteIcon} style={{width: 40, height: 40, marginRight: "1em"}}/>
                         <Typography className={classes.title} variant="h6" noWrap>
-                            Portfall
+                            Portfall {version ? <small>{version}</small> : null}
                         </Typography>
                         {/* todo: arrange by namespace */}
                         <FormControl className={classes.formControl}>
