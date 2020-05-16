@@ -23,7 +23,7 @@
 
 ### [MacOS](https://github.com/rekon-oss/portfall/releases/latest/download/Portfall.dmg), [Windows](https://github.com/rekon-oss/portfall/releases/latest/download/Portfall.exe)
 ### Linux
-#### Use the [AppImage](https://github.com/rekon-oss/portfall/releases/latest/download/Portfall)
+#### Use the [AppImage](https://github.com/rekon-oss/portfall/releases/latest/download/Portfall-x86_64.AppImage)
 Recommend installing [appimaged](https://github.com/AppImage/appimaged) to integrate portfall properly with your system.
 ```bash
 wget "https://github.com/AppImage/appimaged/releases/download/continuous/appimaged-x86_64.AppImage"
