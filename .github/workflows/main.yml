@@ -44,7 +44,7 @@ jobs:
         chmod +x linuxdeploy*.AppImage
         ls ./
         ./linuxdeploy*.AppImage --appdir AppDir --executable Portfall --desktop-file=Portfall.AppImage.desktop --icon-file=appicon.png --output appimage
-      if: matrix.platform == 'ubuntu-latest'
+      if: matrix.platform == 'ubuntu-16.04'
     - name: Build package windows
       run: |
         $GP = (go env GOPATH)
@@ -66,7 +66,7 @@ jobs:
       with:
         name: portfall-linux
         path: Portfall*.AppImage
-      if: matrix.platform == 'ubuntu-latest'
+      if: matrix.platform == 'ubuntu-16.04'
     - name: upload artifact windows
       uses: actions/upload-artifact@v1
       with:
@@ -75,7 +75,7 @@ jobs:
       if: matrix.platform == 'windows-latest'
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-16.04
     needs: package
     steps:
     - name: Create Release
@@ -134,7 +134,7 @@ jobs:
         asset_content_type: application/octet-stream
 
 #  snapify:
-#    runs-on: ubuntu-latest
+#    runs-on: ubuntu-16.04
 #    steps:
 #      - name: Check out Git repository
 #        uses: actions/checkout@v2
