@@ -33,7 +33,7 @@ func (p *PortfallOS) GetVersion() string {
 	//}
 	//p.log.Debugf("Got version %s", bi.Main.Version)
 	//return bi.Main.Version
-	return "v0.8.1"
+	return "v0.8.2"
 }
 
 // WailsInit assigns the runtime to the PortfallOS struct
