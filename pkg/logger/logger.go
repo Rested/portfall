@@ -17,6 +17,7 @@ type CustomLogger struct {
 
 // NewCustomLogger creates a new custom logger with the given prefix
 func NewCustomLogger(prefix string, runtime *wails.Runtime) *CustomLogger {
+	l.SetLogLevel("debug")
 	return &CustomLogger{
 		prefix: "[" + prefix + "] ",
 		runtime: runtime,
