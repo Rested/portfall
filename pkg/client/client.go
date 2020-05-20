@@ -154,7 +154,7 @@ func (c *Client) ListNamespaces() (nsList []string) {
 	namespaces, err := c.s.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
 		c.log.Warnf("Found no namespaces")
-		c.log.Debugf("%v", err)
+		c.log.Errorf("%v", err)
 		return make([]string, 0)
 	}
 	for _, ns := range namespaces.Items {

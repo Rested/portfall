@@ -25,6 +25,8 @@ jobs:
         echo "building on ${{ matrix.platform }}"
         mkdir -p ~/.wails
         cp wails.json ~/.wails/
+        export LOG_LEVEL=debug
+        export GODEBUG=1
         wails build -p
         ls
         echo "turning the .app into a .dmg"
@@ -38,6 +40,8 @@ jobs:
         echo "building on ${{ matrix.platform }}"
         mkdir -p ~/.wails
         cp wails.json ~/.wails/
+        export LOG_LEVEL=debug
+        export GODEBUG=1
         wails build
         # turn into app image
         wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
