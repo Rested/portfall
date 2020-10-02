@@ -8,7 +8,6 @@
   <a href="https://github.com/rekon-oss/portfall/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
   <a href="https://app.fossa.com/projects/git%2Bgithub.com%2Frekon-oss%2Fportfall?ref=badge_shield" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Frekon-oss%2Fportfall.svg?type=shield"/></a>
   <a href="https://github.com/rekon-oss/portfall/issues"><img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat" alt="Contributions Welcome" /></a>
-  <a href="https://build.snapcraft.io/user/rekon-oss/portfall" alt="Snap Status"><img src="https://build.snapcraft.io/badge/rekon-oss/portfall.svg"> </a>
   <img src="https://img.shields.io/badge/MacOS-Supported-Green.svg?style=flat"/>
   <img src="https://img.shields.io/badge/Linux-Supported-Green.svg?style=flat"/>
   <img src="https://img.shields.io/badge/Windows-Supported-Green.svg?style=flat"/>
