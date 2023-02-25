@@ -11,9 +11,7 @@ require (
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/wailsapp/wails v1.0.2
-	golang.org/x/net v0.0.0-20200513185701-a91f0712d120 // indirect
-	golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9 // indirect
-	gopkg.in/AlecAivazis/survey.v1 v1.8.8 // indirect
+	golang.org/x/net v0.7.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86 // indirect
 	k8s.io/api v0.17.4
 	k8s.io/apimachinery v0.17.4
